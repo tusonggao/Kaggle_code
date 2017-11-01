@@ -4,6 +4,7 @@
 *.dat
 *.zip
 *.rar
+*.gz
 *.xlsx
 
 #dump model
