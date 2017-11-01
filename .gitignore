@@ -6,6 +6,8 @@
 *.rar
 *.gz
 *.xlsx
+*.txt
+*.7z
 
 #dump model
 *.pkl
