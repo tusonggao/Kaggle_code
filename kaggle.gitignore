@@ -1,0 +1,21 @@
+#traing or test data file
+*.csv
+*.json
+*.dat
+*.zip
+*.rar
+*.xlsx
+
+#dump model
+*.pkl
+*.exe
+
+#ploting graph
+*.png
+
+#test directory
+house_price_predict/history
+house_price_predict/dumps
+house_price_predict/cache
+
+#
