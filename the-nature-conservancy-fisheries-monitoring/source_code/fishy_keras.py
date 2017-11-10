@@ -55,7 +55,7 @@ def load_train():
 
 
 def load_test():
-    path = os.path.join('..', 'input', 'test_stg2', '*.jpg')
+    path = os.path.join('..', 'input', 'test_stg1', '*.jpg')
     files = sorted(glob.glob(path))
 
     X_test = []
@@ -64,7 +64,15 @@ def load_test():
         flbase = os.path.basename(fl)
         img = get_im_cv2(fl)
         X_test.append(img)
-        X_test_id.append(flbase)
+        X_test_id.append('test_stg1/' + flbase)
+    
+    path = os.path.join('..', 'input', 'test_stg2', '*.jpg')
+    files = sorted(glob.glob(path))
+    for fl in files:
+        flbase = os.path.basename(fl)
+        img = get_im_cv2(fl)
+        X_test.append(img)
+        X_test_id.append('test_stg2/' + flbase)
 
     return X_test, X_test_id
 
@@ -234,9 +242,28 @@ def run_cross_validation_process_test(info_string, models):
 
 
 if __name__ == '__main__':
+    start_t = time.time()
     print('Keras version: {}'.format(keras_version))
     num_folds = 3
     info_string, models = run_cross_validation_create_models(num_folds)
     run_cross_validation_process_test(info_string, models)
+    end_t = time.time()
+    
+    print('total cost time {} sec'.format(end_t-start_t))
+    
+#    _, test_id = load_test()
+#    print('len of test_id is ', len(test_id))
+#    print('test_id is ', test_id)
+    
+#    path = os.path.join('..', 'input', 'train', 'ALB', '*002*.jpg')
+#    files = glob.glob(path)
+#    for fl in files:
+#        flbase = os.path.basename(fl)
+#        print('flbase is ', flbase)
+#        flbase = os.path.basename(fl)
+#        img = get_im_cv2(fl)
+#        X_train.append(img)
+#        X_train_id.append(flbase)
+#        y_train.append(index)
     
     

@@ -20,6 +20,9 @@
 *.jpg
 *.gif
 
+#ipython notebook checkpoint files
+*-checkpoint.ipynb
+
 #the-nature-conservancy-fisheries-monitoring
 the-nature-conservancy-fisheries-monitoring/input
 the-nature-conservancy-fisheries-monitoring/train
@@ -31,5 +34,10 @@ house_price_predict/history
 house_price_predict/dumps
 house_price_predict/cache
 
+
 #
 digit_recognizer/history
+
+#jd_contest
+jd_contest/data
+jd_contest/.ipynb_checkpoints
