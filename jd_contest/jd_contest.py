@@ -40,23 +40,22 @@ def random_select():
     return X_train, X_test, y_train, y_test
 
 def random_train(y_test, ratio=0.7):
+    ratio = len(y_test[y_test==1])/len(y_test) # 计算1所占比例
+    print('len1 len2 is ', len(y_test[y_test==1]), len(y_test))
+    print('computed ratio is ', ratio)
     random_arr = np.random.random(len(y_test))
     y_hat = np.where(random_arr<ratio, 0, 1)
     return y_hat
     
 if __name__=='__main__':
-    print(jd_score([1, 0, 1, 1, 0], [1, 0, 1, 0, 1]))
-    
-    X_train, X_test, y_train, y_test = random_select()
-#    print('y_train is ', len(y_train))
-#    print('y_test is ', len(y_test))
-    y_hat = random_train(y_test, ratio=0.001)   
-    
-    print(jd_score(y_test, y_hat))
-#    print(jd_score(y_test, y_test))
-    
-    print('len of y_test is ', len(y_test), np.unique(y_test))
-    print('len of y_hat is ', len(y_hat), np.unique(y_hat))
+#    print(jd_score([1, 0, 1, 1, 0], [1, 0, 1, 0, 1]))    
+#    X_train, X_test, y_train, y_test = random_select()
+#    y_hat = random_train(y_test, ratio=0.001)       
+#    print(jd_score(y_test, y_hat))    
+#    print('len of y_test is ', len(y_test), np.unique(y_test))
+#    print('len of y_hat is ', len(y_hat), np.unique(y_hat))
+    train_df = pd.read_csv('smalldata.csv')
+    print(train_df.count())
     
     
     
