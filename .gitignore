@@ -1,12 +1,14 @@
-#traing or test data file
+#training or testing data files
 *.csv
 *.json
 *.dat
+*.xlsx
+*.txt
+
+# zipped files
 *.zip
 *.rar
 *.gz
-*.xlsx
-*.txt
 *.7z
 
 #dump model
@@ -15,6 +17,14 @@
 
 #ploting graph
 *.png
+*.jpg
+*.gif
+
+#the-nature-conservancy-fisheries-monitoring
+the-nature-conservancy-fisheries-monitoring/input
+the-nature-conservancy-fisheries-monitoring/train
+the-nature-conservancy-fisheries-monitoring/test_stg1
+
 
 #test directory
 house_price_predict/history
