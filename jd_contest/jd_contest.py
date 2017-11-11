@@ -14,6 +14,13 @@ def jd_score(y_true, y_predicted, beta=0.1):
     score = (1 + beta**2)*(precision*recall)/(beta**2*precision + recall)
     return score
     
+def jd_score111(beta=0.1):
+    precision = 0.85
+    recall = 0.9
+    score = (1 + beta**2)*(precision*recall)/(beta**2*precision + recall)
+    print('precision, recall, score is ', precision, recall, score)
+    return score
+    
 def preprocess_data():
     trade_df = pd.read_csv('./data/Risk_Detection_Qualification/t_trade.csv', index_col='rowkey', dtype={'id': np.str})
     trade_test_df = pd.read_csv('./data/Risk_Detection_Qualification/t_trade_test.csv', index_col='rowkey', dtype={'id': np.str})
@@ -81,8 +88,8 @@ if __name__=='__main__':
     
 #    decide_by_risk_id()
     
-    jd_score_by_id()
-    
+#    jd_score_by_id()
+    jd_score111()
 #    check_data()
     
 #    print(jd_score([1, 0, 1, 1, 0], [1, 0, 1, 0, 1]))    
