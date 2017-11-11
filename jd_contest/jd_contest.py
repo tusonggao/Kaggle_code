@@ -58,35 +58,30 @@ def decide_by_risk_id():  # 根据是否在trade_test中是否为risk id来判�
     trade_df = pd.read_csv('./data/Risk_Detection_Qualification/t_trade.csv', 
                            index_col='rowkey', dtype={'id': np.str})
     trade_test_df = pd.read_csv('./data/Risk_Detection_Qualification/t_trade_test.csv', 
-                                index_col='rowkey', dtype={'id': np.str})
-    
+                                index_col='rowkey', dtype={'id': np.str})    
     risk_id = trade_df[trade_df.is_risk==1]['id'].unique()
     trade_test_df['is_risk'] = 0
     trade_test_df['is_risk'][trade_test_df.id.isin(risk_id)] = 1
     results_df = trade_test_df['is_risk']
-
     results_df.to_csv('results_by_id.csv')
     
-    arr = trade_test_df.id.isin(risk_id)
-    print('arr is ', arr)
-    
-    ttt = trade_df.is_risk==1
-    print('ttt sum is ', ttt.sum(), len(trade_df))
-    
-def check_data():
-    my_results_df = pd.read_csv('./results_by_id.csv')
-    standard_results_df = pd.read_csv('./data/Risk_Detection_Upload_Sample.csv')
-    check = my_results_df['0']
-    print(my_results_df)
-    print('check is ', check.sum(), len(check))
+def jd_score_by_id():  # 只有 0.606523111616
+    trade_df = pd.read_csv('./data/Risk_Detection_Qualification/t_trade.csv', 
+                           index_col='rowkey', dtype={'id': np.str})
+    trade_df_results = trade_df.copy()
+    trade_df_results['is_risk'] = 0
+    risk_id = trade_df[trade_df.is_risk==1]['id'].unique()
+    trade_df_results['is_risk'][trade_df_results['id'].isin(risk_id)] = 1
+    print('jd_score is ', jd_score(trade_df['is_risk'], trade_df_results['is_risk']))
     
     
-204/17875
 
 if __name__=='__main__':
 #    print(preprocess_data())
     
-    decide_by_risk_id()
+#    decide_by_risk_id()
+    
+    jd_score_by_id()
     
 #    check_data()
     
