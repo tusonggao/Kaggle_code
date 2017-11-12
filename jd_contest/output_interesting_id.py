@@ -79,8 +79,19 @@ def get_city_ip_login_num():
     trade_df_new['city_num'] = city_count_df['city'][trade_df_new['id']].values
     trade_df_new.to_csv('ip_city_num.csv')
     
-def compute_last_time(device, ip, city, login_df):
+
+def compute_elaspe_time(time1, time2): #计算间隔时间，以分钟计算 会包含小数点部分
+    if time1 > time2:
+        time1, time2 = time2, time1
+    elapse = (time2 - time1)
+    elapse = np.timedelta64(elapse, 's')
+    elapse = elapse.astype('float')/60.0  # 计算间隔的分钟数，转换为float类型
+    return elapse
+    
+
+def compute_last_time(device, ip, city, last_login_time, login_df):
     device_t, ip_t, city_t = None, None, None
+    
     device_t_series = login_df['time'][login_df.device==device]
     ip_t_series = login_df['time'][login_df.ip==ip]
     city_t_series = login_df['time'][login_df.city==city]
@@ -90,9 +101,15 @@ def compute_last_time(device, ip, city, login_df):
         ip_t = ip_t_series[-1]
     if len(city_t_series)>0:
         city_t = city_t_series[-1]
-    return device_t, ip_t, city_t
+
+    result_t = []
+    for t in (device_t, ip_t, city_t):
+        time_t = 10.**6 if t==None else compute_elaspe_time(t, last_login_time)
+        result_t.append(time_t)
+    return result_t
+
     
-def get_last_login_device_ip_city_time(): #最后一次登录的device ip city所登录距离现在的时间（以分钟计算）如果从来没有登录过 则为10**6
+def get_last_login_device_ip_city_time(): # 最后一次登录的device ip city所登录距离现在的时间（以分钟计算）如果从来没有登录过 则为10**6
     global trade_df, merged_login_df
     trade_df_new = trade_df.copy()
     device_new, ip_new, city_new = [], [], []
@@ -106,18 +123,16 @@ def get_last_login_device_ip_city_time(): #最后一次登录的device ip city�
         user_id = row['id']
         login_sub_df = merged_login_df[merged_login_df.id==user_id].sort_values(by='time')
         login_sub_df = login_sub_df[login_sub_df.time<=trade_time]
-        if len(login_sub_df)==0: # 如果没有最后一次登录 则为0
+        if len(login_sub_df)==0:  # 如果没有最后一次登录,则为10.**6
             device_new.append[10.**6]
             ip_new.append[10.**6]
             city_new.append[10.**6]
         else:
-            device, ip, city = login_sub_df.iloc[-1][['device', 'ip', 'city']]
-            device_time, ip_time, city_time = compute_last_time(device, ip, city, login_sub_df.iloc[:-1])
-            
-            
-        login_sub_df = login_sub_df.iloc[-N:, :]
-        elaspe_time = get_change_city_min_elapse(login_sub_df)
-        min_elapses.append(elaspe_time)
+            device, ip, city, last_login_t = login_sub_df.iloc[-1][['device', 'ip', 'city', 'time']]
+            device_t, ip_t, city_t = compute_last_time(device, ip, city, last_login_t, login_sub_df.iloc[:-1])
+            device_new.append(device_t)
+            ip_new.append(ip_t)
+            city_new.append(city_t)
         if count>10:
             break
     end_t = time.time()
@@ -125,7 +140,7 @@ def get_last_login_device_ip_city_time(): #最后一次登录的device ip city�
     trade_df_new['device_new'] = np.array(device_new)
     trade_df_new['ip_new'] = np.array(ip_new)
     trade_df_new['city_new'] = np.array(city_new)
-    trade_df_new.to_csv('last_login_whether_new.csv')
+    trade_df_new.to_csv('last_login_device_ip_city_time.csv')
     
 
 def get_last_half_year_city_ip_num():
