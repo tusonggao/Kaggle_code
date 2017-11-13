@@ -8,39 +8,6 @@ import matplotlib.pyplot as plt
 from sklearn import metrics
 from sklearn.model_selection import train_test_split
 
-
-#city_shifted = login_sub_df['city'].shift(1)
-#city_changed = login_sub_df['city']!=city_shifted
-#login_sub_df[city_changed]
-
-#def get_one():
-#    global trade_df, merged_login_df
-#    risk_id = trade_df[trade_df.is_risk==1]['id'].unique()
-#    risk_login_df = merged_login_df[merged_login_df.id.isin(risk_id)]
-#    count_df = risk_login_df.groupby(risk_login_df['id']).count()
-#    print('count_df is ', count_df)
-
-    
-#def get_city_ip_login_num():
-#    global trade_df, merged_login_df
-#    print('starting computing')
-#    start_t = time.time()
-#    trade_df_new = trade_df.copy()
-#    
-#    ip_count_df = merged_login_df[['ip']].groupby(merged_login_df['id']).unique().count()
-#    city_count_df = merged_login_df[['city']].groupby(merged_login_df['id']).unique().count()
-#    end_t = time.time()
-#    print('cost time is ', end_t-start_t)
-#    
-#    trade_df_id_set = set(trade_df_new['id'])
-#    merged_login_df_id_set = set(ip_count_df.index)
-#    check = trade_df_id_set < merged_login_df_id_set
-#    print('check is ', check)
-#    
-#    trade_df_new['ip_num'] = ip_count_df['ip'][trade_df_new['id']].values
-#    trade_df_new['city_num'] = city_count_df['city'][trade_df_new['id']].values
-#    trade_df_new['city_num'] = city_count_df['city'][trade_df_new['id']].values
-#    trade_df_new.to_csv('ip_city_num.csv')
     
 #------------------------------------------------------------------------------------#
 #得到本次交易最近20次登录切换城市的最小分钟数
@@ -379,34 +346,39 @@ def get_last3_login_info():
     
     
 #------------------------------------------------------------------------------------#
-#得到该id在这之前的总交易次数、总登录次数、登录过的city数、ip数、device数
-def get_before_trade_login_city_ip_device_num():  
-    global trade_df, merged_login_df
+#得到该id在这之前的总交易次数、总登录次数
+def get_before_trade_trade_login_num():  
+    global trade_df, merged_login_df, outputdir
+    trade_df_new = trade_df.copy()
+    trade_df_new = trade_df_new.sort_values(by='time')
+#    trade_df_new = trade_df_new.iloc[:300]
+    trade_num_list, login_num_list = [], []
+    count = 0
     print('starting computing')
     start_t = time.time()
-    trade_df_new = trade_df.copy()
-    ip_count_df = merged_login_df[['ip']].groupby(merged_login_df['id']).unique().count()
-    city_count_df = merged_login_df[['city']].groupby(merged_login_df['id']).unique().count()
+    for index, row in trade_df_new.iterrows():
+        print('get_before_trade_trade_login_num compute ', count)
+        count += 1
+        trade_time = row['time']
+        user_id = row['id']
+        trade_sub_df = trade_df_new[trade_df_new.id==user_id]
+        trade_sub_df = trade_sub_df[trade_sub_df.time<=trade_time]
+        trade_num_list.append(len(trade_sub_df))
+
+        login_sub_df = merged_login_df[merged_login_df.id==user_id].sort_values(by='time')
+        login_sub_df = login_sub_df[login_sub_df.time<=trade_time]
+        login_num_list.append(len(login_sub_df))
     end_t = time.time()
     print('cost time is ', end_t-start_t)
-    
-    trade_df_id_set = set(trade_df_new['id'])
-    merged_login_df_id_set = set(ip_count_df.index)
-    check = trade_df_id_set < merged_login_df_id_set
-    print('check is ', check)
-    
-    trade_df_new['last_half_year_ip_num'] = ip_count_df['ip'][trade_df_new['id']].values
-    trade_df_new['last_half_year_city_num'] = city_count_df['city'][trade_df_new['id']].values
-    trade_df_new.to_csv('ip_city_num.csv')
-    
+    trade_df_new['before_trade_num'] = np.array(trade_num_list)
+    trade_df_new['before_login_num'] = np.array(login_num_list)
+    trade_df_new.to_csv(outputdir + 'before_trade_trade_login_num.csv')    
     
     
 if __name__=='__main__':
     start_t = time.time()
-#    trade_df = pd.read_csv('./data/Risk_Detection_Qualification/t_trade.csv', 
-#                           index_col='rowkey', dtype={'id': np.str})
-    trade_df = pd.read_csv('./data/Risk_Detection_Qualification/t_trade_test.csv', 
-                                index_col='rowkey', dtype={'id': np.str})
+    trade_df = pd.read_csv('./data/Risk_Detection_Qualification/t_trade.csv', 
+                           index_col='rowkey', dtype={'id': np.str})
     dateparse = lambda x: pd.datetime.strptime(x, '%Y-%m-%d %H:%M:%S')
     login_df = pd.read_csv('./data/Risk_Detection_Qualification/t_login.csv', 
                            index_col='log_id', 
@@ -421,20 +393,35 @@ if __name__=='__main__':
     
     print('load cost time: ', end_t-start_t)
     
-#    output_dir = './features/train/'
-    
+    outputdir = './features/train/'
 #    for path_name in ('./features/train/', './features/test/'):
 #        outputdir = path_name
-
-    outputdir = './features/test/'
+    
+    
 #    get_neareast_N_change_city_min_elaspe()
 #    get_last_login_device_ip_city_time()
 #    get_whether_today_first_trade_login()
 #    get_last_login_trade_time_elapse()
 #    get_whether_this_trade_same_device_ip_city()
-    get_last3_login_info()
+#    get_last3_login_info()
     
+#    df = pd.DataFrame({'A': [1, 2, 3, 4], 'B': [2, 4, 5, np.nan], 
+#                       'C': [100, 200, 300, np.nan]})
+#    df.to_csv('test_output111.csv')
 
+    get_before_trade_trade_login_num()
+    
+    outputdir = './features/test/'    
+    trade_df = pd.read_csv('./data/Risk_Detection_Qualification/t_trade_test.csv', 
+                                index_col='rowkey', dtype={'id': np.str})
+    get_before_trade_trade_login_num()
+    
+#    df = pd.read_csv('./features/test/last3_login_info.csv')
+#    print('df is ', df.count())
+#    result_df = pd.get_dummies(df['result1'])
+#    print(result_df.head(20))
+    
+    
     
     
     
