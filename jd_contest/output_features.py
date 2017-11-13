@@ -403,18 +403,19 @@ if __name__=='__main__':
 #    get_whether_today_first_trade_login()
 #    get_last_login_trade_time_elapse()
 #    get_whether_this_trade_same_device_ip_city()
-#    get_last3_login_info()
+    
     
 #    df = pd.DataFrame({'A': [1, 2, 3, 4], 'B': [2, 4, 5, np.nan], 
 #                       'C': [100, 200, 300, np.nan]})
 #    df.to_csv('test_output111.csv')
 
-    get_before_trade_trade_login_num()
+#    get_before_trade_trade_login_num()
     
     outputdir = './features/test/'    
     trade_df = pd.read_csv('./data/Risk_Detection_Qualification/t_trade_test.csv', 
                                 index_col='rowkey', dtype={'id': np.str})
-    get_before_trade_trade_login_num()
+#    get_before_trade_trade_login_num()
+    get_last3_login_info()
     
 #    df = pd.read_csv('./features/test/last3_login_info.csv')
 #    print('df is ', df.count())
