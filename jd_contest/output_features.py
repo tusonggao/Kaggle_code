@@ -45,7 +45,7 @@ from sklearn.model_selection import train_test_split
 #------------------------------------------------------------------------------------#
 #得到本次交易最近20次登录切换城市的最小分钟数
 def get_neareast_N_change_city_min_elaspe(N=20):  
-    global trade_df, merged_login_df
+    global trade_df, merged_login_df, outputdir
     trade_df_new = trade_df.copy()
     min_elapses = []
     count = 0
@@ -64,8 +64,9 @@ def get_neareast_N_change_city_min_elaspe(N=20):
     end_t = time.time()
     print('cost time is ', end_t-start_t)
     trade_df_new['change_city_min_elaspe'] = np.array(min_elapses)
-    trade_df_new.to_csv('./features/change_city_min_elaspe.csv')
+    trade_df_new.to_csv(outputdir + 'change_city_min_elaspe.csv')
 
+    
 def get_change_city_min_elapse(login_df):
     min_elapse = 10.**8
     for i in range(len(login_df)-1):
@@ -81,7 +82,7 @@ def get_change_city_min_elapse(login_df):
 #------------------------------------------------------------------------------------#
 #本次交易最后一次登录的device ip city所登录距离现在的时间（以分钟计算）如果从来没有登录过 则为10**8
 def get_last_login_device_ip_city_time(): 
-    global trade_df, merged_login_df
+    global trade_df, merged_login_df, outputdir
     trade_df_new = trade_df.copy()
 #    trade_df_new = trade_df_new.iloc[:200]
     device_new, ip_new, city_new = [], [], []
@@ -111,7 +112,7 @@ def get_last_login_device_ip_city_time():
     trade_df_new['device_new'] = np.array(device_new)
     trade_df_new['ip_new'] = np.array(ip_new)
     trade_df_new['city_new'] = np.array(city_new)
-    trade_df_new.to_csv('./features/last_login_device_ip_city_time.csv')
+    trade_df_new.to_csv(outputdir + 'last_login_device_ip_city_time.csv')
     
 def compute_last_time(device, ip, city, last_login_time, login_df):
     device_t, ip_t, city_t = None, None, None
@@ -151,7 +152,7 @@ def compute_elaspe_time(time1, time2):
 #------------------------------------------------------------------------------------#
 #本次交易是否是当天第一次交易，是否是当天第一次登录
 def get_whether_today_first_trade_login():  
-    global trade_df, merged_login_df
+    global trade_df, merged_login_df, outputdir
     trade_df_new = trade_df.copy()
     trade_df_new = trade_df_new.sort_values(by='time')
     first_trade_list, first_login_list = [], []
@@ -189,7 +190,7 @@ def get_whether_today_first_trade_login():
     print('cost time is ', end_t-start_t)
     trade_df_new['today_first_trade'] = np.array(first_trade_list)
     trade_df_new['today_first_login'] = np.array(first_login_list)
-    trade_df_new.to_csv('./features/whether_today_first_trade_login.csv')
+    trade_df_new.to_csv(outputdir + 'whether_today_first_trade_login.csv')
 
 #time1 time2为 np.datetime64 类型
 def check_whether_same_day(time1, time2):
@@ -204,7 +205,7 @@ def check_whether_same_day(time1, time2):
 #------------------------------------------------------------------------------------#
 #本次交易距离上一次交易时间，本次登录距离上一次登录时间，本次交易与登录之间的时间差，以分钟计数
 def get_last_login_trade_time_elapse():  
-    global trade_df, merged_login_df
+    global trade_df, merged_login_df, outputdir
     trade_df_new = trade_df.copy()
     trade_df_new = trade_df_new.sort_values(by='time')
 #    trade_df_new = trade_df_new.iloc[:200]
@@ -246,15 +247,14 @@ def get_last_login_trade_time_elapse():
     trade_df_new['last_trade_elapse'] = np.array(trade_elapse_list)
     trade_df_new['last_login_elapse'] = np.array(login_elapse_list)
     trade_df_new['trade_login_elapse'] = np.array(trade_login_elapse_list)
-    trade_df_new.to_csv('./features/last_login_trade_time_elapse.csv')
+    trade_df_new.to_csv(outputdir + 'last_login_trade_time_elapse.csv')
 
 #------------------------------------------------------------------------------------#
 #得本次交易登录的device ip city是否与上一次登录相同，如果没有上次登录 默认为0
 def get_whether_this_trade_same_device_ip_city():  
-    global trade_df, merged_login_df
+    global trade_df, merged_login_df, outputdir
     trade_df_new = trade_df.copy()
     trade_df_new = trade_df_new.sort_values(by='time')
-#    trade_df_new = trade_df_new.iloc[400:800]
     same_device_list, same_ip_list, same_city_list = [], [], []
     count = 0
     print('starting computing')
@@ -282,9 +282,102 @@ def get_whether_this_trade_same_device_ip_city():
     trade_df_new['same_device'] = np.array(same_device_list)
     trade_df_new['same_ip'] = np.array(same_ip_list)
     trade_df_new['same_city'] = np.array(same_city_list)
-    trade_df_new.to_csv('./features/whether_this_trade_new_device_ip_city.csv')
+    trade_df_new.to_csv(outputdir + 'whether_this_trade_new_device_ip_city.csv')
     
-
+#------------------------------------------------------------------------------------#
+#得本次交易最近三次登录的登录时间、登录来源、登录结果、是否扫码
+def get_last3_login_info():  
+    global trade_df, merged_login_df, outputdir
+    trade_df_new = trade_df.copy()
+    trade_df_new = trade_df_new.sort_values(by='time')
+    
+    time_long1_list, time_long2_list, time_long3_list = [], [], []
+    log_from1_list, log_from2_list, log_from3_list = [], [], []
+    result1_list, result2_list, result3_list = [], [], []
+    is_scan1_list, is_scan2_list, is_scan3_list = [], [], []
+    count = 0
+    print('starting computing')
+    start_t = time.time()
+    for index, row in trade_df_new.iterrows():
+        print('get_last3_login_info compute ', count)
+        count += 1
+        trade_time = row['time']
+        user_id = row['id']
+        login_sub_df = merged_login_df[merged_login_df.id==user_id].sort_values(by='time')
+        login_sub_df = login_sub_df[login_sub_df.time<=trade_time]
+        if login_sub_df.shape[0]>=3:
+            time_long1_list.append(login_sub_df['timelong'].values[-1])
+            time_long2_list.append(login_sub_df['timelong'].values[-2])
+            time_long3_list.append(login_sub_df['timelong'].values[-3])
+            log_from1_list.append(login_sub_df['log_from'].values[-1])
+            log_from2_list.append(login_sub_df['log_from'].values[-2])
+            log_from3_list.append(login_sub_df['log_from'].values[-3])
+            result1_list.append(login_sub_df['result'].values[-1])
+            result2_list.append(login_sub_df['result'].values[-2])
+            result3_list.append(login_sub_df['result'].values[-3])
+            is_scan1_list.append(login_sub_df['is_scan'].values[-1])
+            is_scan2_list.append(login_sub_df['is_scan'].values[-2])
+            is_scan3_list.append(login_sub_df['is_scan'].values[-3])
+        elif login_sub_df.shape[0]==2:
+            time_long1_list.append(login_sub_df['timelong'].values[-1])
+            time_long2_list.append(login_sub_df['timelong'].values[-2])
+            time_long3_list.append(np.nan)
+            log_from1_list.append(login_sub_df['log_from'].values[-1])
+            log_from2_list.append(login_sub_df['log_from'].values[-2])
+            log_from3_list.append(np.nan)
+            result1_list.append(login_sub_df['result'].values[-1])
+            result2_list.append(login_sub_df['result'].values[-2])
+            result3_list.append(np.nan)
+            is_scan1_list.append(login_sub_df['is_scan'].values[-1])
+            is_scan2_list.append(login_sub_df['is_scan'].values[-2])
+            is_scan3_list.append(np.nan)
+        elif login_sub_df.shape[0]==1:
+            time_long1_list.append(login_sub_df['timelong'].values[-1])
+            time_long2_list.append(np.nan)
+            time_long3_list.append(np.nan)
+            log_from1_list.append(login_sub_df['log_from'].values[-1])
+            log_from2_list.append(np.nan)
+            log_from3_list.append(np.nan)
+            result1_list.append(login_sub_df['result'].values[-1])
+            result2_list.append(np.nan)
+            result3_list.append(np.nan)
+            is_scan1_list.append(login_sub_df['is_scan'].values[-1])
+            is_scan2_list.append(np.nan)
+            is_scan3_list.append(np.nan)
+        else:
+            time_long1_list.append(np.nan)
+            time_long2_list.append(np.nan)
+            time_long3_list.append(np.nan)
+            log_from1_list.append(np.nan)
+            log_from2_list.append(np.nan)
+            log_from3_list.append(np.nan)
+            result1_list.append(np.nan)
+            result2_list.append(np.nan)
+            result3_list.append(np.nan)
+            is_scan1_list.append(np.nan)
+            is_scan2_list.append(np.nan)
+            is_scan3_list.append(np.nan)
+            
+    end_t = time.time()
+    print('cost time is ', end_t-start_t)
+    trade_df_new['time_long1'] = np.array(time_long1_list)
+    trade_df_new['time_long2'] = np.array(time_long2_list)
+    trade_df_new['time_long3'] = np.array(time_long3_list)
+    
+    trade_df_new['log_from1'] = np.array(log_from1_list)
+    trade_df_new['log_from2'] = np.array(log_from2_list)
+    trade_df_new['log_from3'] = np.array(log_from3_list)
+    
+    trade_df_new['result1'] = np.array(result1_list)
+    trade_df_new['result2'] = np.array(result2_list)
+    trade_df_new['result3'] = np.array(result3_list)
+    
+    trade_df_new['is_scan1'] = np.array(is_scan1_list)
+    trade_df_new['is_scan2'] = np.array(is_scan2_list)
+    trade_df_new['is_scan3'] = np.array(is_scan3_list)
+    trade_df_new.to_csv(outputdir + 'last3_login_info.csv')
+    
+    
 #------------------------------------------------------------------------------------#
 #得到该id在这之前的总交易次数、总登录次数、登录过的city数、ip数、device数
 def get_before_trade_login_city_ip_device_num():  
@@ -310,9 +403,9 @@ def get_before_trade_login_city_ip_device_num():
     
 if __name__=='__main__':
     start_t = time.time()
-    trade_df = pd.read_csv('./data/Risk_Detection_Qualification/t_trade.csv', 
-                           index_col='rowkey', dtype={'id': np.str})
-    trade_test_df = pd.read_csv('./data/Risk_Detection_Qualification/t_trade_test.csv', 
+#    trade_df = pd.read_csv('./data/Risk_Detection_Qualification/t_trade.csv', 
+#                           index_col='rowkey', dtype={'id': np.str})
+    trade_df = pd.read_csv('./data/Risk_Detection_Qualification/t_trade_test.csv', 
                                 index_col='rowkey', dtype={'id': np.str})
     dateparse = lambda x: pd.datetime.strptime(x, '%Y-%m-%d %H:%M:%S')
     login_df = pd.read_csv('./data/Risk_Detection_Qualification/t_login.csv', 
@@ -325,14 +418,21 @@ if __name__=='__main__':
                                 parse_dates=['time'], date_parser=dateparse)
     merged_login_df = login_df.append(login_test_df)
     end_t = time.time()
+    
     print('load cost time: ', end_t-start_t)
     
+#    output_dir = './features/train/'
+    
+#    for path_name in ('./features/train/', './features/test/'):
+#        outputdir = path_name
+
+    outputdir = './features/test/'
 #    get_neareast_N_change_city_min_elaspe()
-#    get_city_ip_num()
 #    get_last_login_device_ip_city_time()
 #    get_whether_today_first_trade_login()
 #    get_last_login_trade_time_elapse()
-    get_whether_this_trade_same_device_ip_city()
+#    get_whether_this_trade_same_device_ip_city()
+    get_last3_login_info()
     
 
     
