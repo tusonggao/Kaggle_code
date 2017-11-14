@@ -14,6 +14,7 @@ from sklearn.model_selection import train_test_split
 def get_neareast_N_change_city_min_elaspe(N=20):  
     global trade_df, merged_login_df, outputdir
     trade_df_new = trade_df.copy()
+#    trade_df_new = trade_df_new.iloc[:100]
     min_elapses = []
     count = 0
     print('starting computing')
@@ -27,7 +28,10 @@ def get_neareast_N_change_city_min_elaspe(N=20):
         login_sub_df = login_sub_df[login_sub_df.time<=trade_time]
         login_sub_df = login_sub_df.iloc[-N:, :]
         elaspe_time = get_change_city_min_elapse(login_sub_df)
-        min_elapses.append(elaspe_time)
+        if elaspe_time==10.**8:
+            min_elapses.append(np.nan)
+        else:            
+            min_elapses.append(elaspe_time)
     end_t = time.time()
     print('cost time is ', end_t-start_t)
     trade_df_new['change_city_min_elaspe'] = np.array(min_elapses)
@@ -43,30 +47,30 @@ def get_change_city_min_elapse(login_df):
             elapse = (time_next - time)
             elapse = np.timedelta64(elapse, 's')
             elapse = elapse.astype('float')/60.0  # 计算间隔的分钟数，转换为float类型
-            min_elapse = min(min_elapse, elapse)        
+            min_elapse = min(min_elapse, elapse)
     return min_elapse
     
 #------------------------------------------------------------------------------------#
 #本次交易最后一次登录的device ip city所登录距离现在的时间（以分钟计算）如果从来没有登录过 则为10**8
-def get_last_login_device_ip_city_time(): 
+def get_last_login_device_ip_city_elapse(): 
     global trade_df, merged_login_df, outputdir
     trade_df_new = trade_df.copy()
-#    trade_df_new = trade_df_new.iloc[:200]
+#    trade_df_new = trade_df_new.iloc[:100]
     device_new, ip_new, city_new = [], [], []
     count = 0
     print('starting computing')
     start_t = time.time()
     for index, row in trade_df_new.iterrows():
-        print('get_last_login_device_ip_city_time compute ', count)
+        print('get_last_login_device_ip_city_elapse compute ', count)
         count += 1
         trade_time = row['time']
         user_id = row['id']
         login_sub_df = merged_login_df[merged_login_df.id==user_id].sort_values(by='time')
         login_sub_df = login_sub_df[login_sub_df.time<=trade_time]
-        if len(login_sub_df)==0:  # 如果没有最后一次登录,则为10.**6
-            device_new.append(10.**8)
-            ip_new.append(10.**8)
-            city_new.append(10.**8)
+        if len(login_sub_df)==0:
+            device_new.append(np.nan)
+            ip_new.append(np.nan)
+            city_new.append(np.nan)
         else:
             device, ip, city = login_sub_df.iloc[-1][['device', 'ip', 'city']]
             last_login_t = login_sub_df['time'].values[-1]
@@ -76,10 +80,10 @@ def get_last_login_device_ip_city_time():
             city_new.append(city_t)
     end_t = time.time()
     print('cost time is ', end_t-start_t)
-    trade_df_new['device_new'] = np.array(device_new)
-    trade_df_new['ip_new'] = np.array(ip_new)
-    trade_df_new['city_new'] = np.array(city_new)
-    trade_df_new.to_csv(outputdir + 'last_login_device_ip_city_time.csv')
+    trade_df_new['last_device_elapse'] = np.array(device_new)
+    trade_df_new['last_ip_elapse'] = np.array(ip_new)
+    trade_df_new['last_city_elapse'] = np.array(city_new)
+    trade_df_new.to_csv(outputdir + 'last_login_device_ip_city_elapse.csv')
     
 def compute_last_time(device, ip, city, last_login_time, login_df):
     device_t, ip_t, city_t = None, None, None
@@ -97,7 +101,7 @@ def compute_last_time(device, ip, city, last_login_time, login_df):
     result_t = []
     for t in (device_t, ip_t, city_t):
         if t==None:
-            time_t = 10.**8 
+            time_t = np.nan
         else:
             time_t = compute_elaspe_time(t, last_login_time)
         result_t.append(time_t)
@@ -122,6 +126,7 @@ def get_whether_today_first_trade_login():
     global trade_df, merged_login_df, outputdir
     trade_df_new = trade_df.copy()
     trade_df_new = trade_df_new.sort_values(by='time')
+#    trade_df_new = trade_df_new.iloc[:100]
     first_trade_list, first_login_list = [], []
     id_newest_trade_time = {}
     count = 0
@@ -175,7 +180,7 @@ def get_last_login_trade_time_elapse():
     global trade_df, merged_login_df, outputdir
     trade_df_new = trade_df.copy()
     trade_df_new = trade_df_new.sort_values(by='time')
-#    trade_df_new = trade_df_new.iloc[:200]
+#    trade_df_new = trade_df_new.iloc[:100]
     trade_elapse_list, login_elapse_list, trade_login_elapse_list = [], [], []
     id_newest_trade_time = {}
     count = 0
@@ -187,7 +192,7 @@ def get_last_login_trade_time_elapse():
         trade_time = row['time']
         user_id = row['id']
         if user_id not in id_newest_trade_time:
-            trade_elapse_list.append(10.**8)
+            trade_elapse_list.append(np.nan)
         else:
             last_trade_time = id_newest_trade_time[user_id]
             elapse_t = compute_elaspe_time(trade_time, last_trade_time)
@@ -205,10 +210,10 @@ def get_last_login_trade_time_elapse():
                 elapse_t = compute_elaspe_time(login_t, last_login_t)
                 login_elapse_list.append(elapse_t)     
             else:
-                login_elapse_list.append(10.**8)     
+                login_elapse_list.append(np.nan)     
         else:
-            login_elapse_list.append(10.**8)
-            trade_login_elapse_list.append(10.**8)
+            login_elapse_list.append(np.nan)
+            trade_login_elapse_list.append(np.nan)
     end_t = time.time()
     print('cost time is ', end_t-start_t)
     trade_df_new['last_trade_elapse'] = np.array(trade_elapse_list)
@@ -222,6 +227,7 @@ def get_whether_this_trade_same_device_ip_city():
     global trade_df, merged_login_df, outputdir
     trade_df_new = trade_df.copy()
     trade_df_new = trade_df_new.sort_values(by='time')
+#    trade_df_new = trade_df_new.iloc[:100]
     same_device_list, same_ip_list, same_city_list = [], [], []
     count = 0
     print('starting computing')
@@ -257,6 +263,7 @@ def get_last3_login_info():
     global trade_df, merged_login_df, outputdir
     trade_df_new = trade_df.copy()
     trade_df_new = trade_df_new.sort_values(by='time')
+#    trade_df_new = trade_df_new.iloc[:100]
     
     time_long1_list, time_long2_list, time_long3_list = [], [], []
     log_from1_list, log_from2_list, log_from3_list = [], [], []
@@ -351,7 +358,7 @@ def get_before_trade_trade_login_num():
     global trade_df, merged_login_df, outputdir
     trade_df_new = trade_df.copy()
     trade_df_new = trade_df_new.sort_values(by='time')
-#    trade_df_new = trade_df_new.iloc[:300]
+#    trade_df_new = trade_df_new.iloc[:100]
     trade_num_list, login_num_list = [], []
     count = 0
     print('starting computing')
@@ -372,50 +379,91 @@ def get_before_trade_trade_login_num():
     print('cost time is ', end_t-start_t)
     trade_df_new['before_trade_num'] = np.array(trade_num_list)
     trade_df_new['before_login_num'] = np.array(login_num_list)
-    trade_df_new.to_csv(outputdir + 'before_trade_trade_login_num.csv')    
+    trade_df_new.to_csv(outputdir + 'before_trade_trade_login_num.csv')   
+
+#------------------------------------------------------------------------------------#
+#得到该id在这之前30天的总交易次数、总登录次数
+def get_before_30days_trade_login_num():
+    global trade_df, merged_login_df, outputdir
+    trade_df_new = trade_df.copy()
+    trade_df_new = trade_df_new.sort_values(by='time')
+    trade_df_new = trade_df_new.iloc[:100]
+    trade_num_list, login_num_list = [], []
+    count = 0
+    print('starting computing')
+    start_t = time.time()
+    for index, row in trade_df_new.iterrows():
+        print('get_before_trade_trade_login_num compute ', count)
+        count += 1
+        trade_time = row['time']
+        user_id = row['id']
+        trade_sub_df = trade_df_new[trade_df_new.id==user_id]
+        trade_sub_df = trade_sub_df[trade_sub_df.time<=trade_time]
+        trade_num_list.append(len(trade_sub_df))
+
+        login_sub_df = merged_login_df[merged_login_df.id==user_id].sort_values(by='time')
+        login_sub_df = login_sub_df[login_sub_df.time<=trade_time]
+        login_num_list.append(len(login_sub_df))
+    end_t = time.time()
+    print('cost time is ', end_t-start_t)
+    trade_df_new['before_trade_num'] = np.array(trade_num_list)
+    trade_df_new['before_login_num'] = np.array(login_num_list)
+    trade_df_new.to_csv(outputdir + 'before_30days_trade_login_num.csv')
     
     
 if __name__=='__main__':
+#    trade_df = pd.read_csv('./data/Risk_Detection_Qualification/t_trade.csv', 
+#                           index_col='rowkey', dtype={'id': np.str})
+#    login_df = pd.read_csv('./data/Risk_Detection_Qualification/t_login.csv', 
+#                           index_col='log_id', 
+#                           dtype={'id': np.str, 'timestamp': np.str},
+#                           parse_dates=['time'], date_parser=dateparse)
+
     start_t = time.time()
-    trade_df = pd.read_csv('./data/Risk_Detection_Qualification/t_trade.csv', 
-                           index_col='rowkey', dtype={'id': np.str})
     dateparse = lambda x: pd.datetime.strptime(x, '%Y-%m-%d %H:%M:%S')
-    login_df = pd.read_csv('./data/Risk_Detection_Qualification/t_login.csv', 
-                           index_col='log_id', 
-                           dtype={'id': np.str, 'timestamp': np.str},
-                           parse_dates=['time'], date_parser=dateparse)
-    login_test_df = pd.read_csv('./data/Risk_Detection_Qualification/t_login_test.csv', 
-                                index_col='log_id', 
-                                dtype={'id': np.str, 'timestamp': np.str},
-                                parse_dates=['time'], date_parser=dateparse)
-    merged_login_df = login_df.append(login_test_df)
-    end_t = time.time()
-    
-    print('load cost time: ', end_t-start_t)
     
     outputdir = './features/train/'
-#    for path_name in ('./features/train/', './features/test/'):
-#        outputdir = path_name
+    trade_df = pd.read_csv('./data/Risk_Detection_Qualification/t_trade.csv', 
+                           index_col='rowkey')
+    
+    login_df = pd.read_csv('./data/Risk_Detection_Qualification/t_login.csv', 
+                           index_col='log_id', parse_dates=['time'], 
+                           date_parser=dateparse)
+    login_test_df = pd.read_csv('./data/Risk_Detection_Qualification/t_login_test.csv', 
+                                index_col='log_id', parse_dates=['time'],
+                                date_parser=dateparse)
+    merged_login_df = login_df.append(login_test_df)
     
     
 #    get_neareast_N_change_city_min_elaspe()
-#    get_last_login_device_ip_city_time()
+#    get_last_login_device_ip_city_elapse()
 #    get_whether_today_first_trade_login()
 #    get_last_login_trade_time_elapse()
 #    get_whether_this_trade_same_device_ip_city()
+#    get_last3_login_info()
+    get_before_trade_trade_login_num()
     
     
 #    df = pd.DataFrame({'A': [1, 2, 3, 4], 'B': [2, 4, 5, np.nan], 
 #                       'C': [100, 200, 300, np.nan]})
 #    df.to_csv('test_output111.csv')
 
-#    get_before_trade_trade_login_num()
+    
     
     outputdir = './features/test/'    
     trade_df = pd.read_csv('./data/Risk_Detection_Qualification/t_trade_test.csv', 
-                                index_col='rowkey', dtype={'id': np.str})
-#    get_before_trade_trade_login_num()
-    get_last3_login_info()
+                           index_col='rowkey')
+    
+#    get_neareast_N_change_city_min_elaspe() #
+#    get_last_login_device_ip_city_elapse() # 
+#    get_whether_today_first_trade_login() #
+#    get_last_login_trade_time_elapse() # 
+#    get_whether_this_trade_same_device_ip_city() #
+#    get_last3_login_info() #
+    get_before_trade_trade_login_num()
+    
+    end_t = time.time()
+    print('total running cost time: ', end_t-start_t)
     
 #    df = pd.read_csv('./features/test/last3_login_info.csv')
 #    print('df is ', df.count())
