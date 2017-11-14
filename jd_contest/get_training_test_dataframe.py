@@ -76,33 +76,37 @@ def expand_df(merged_df):
     
     
 if __name__=='__main__':
-    start_t = time.time()
-    trade_df = pd.read_csv('./data/Risk_Detection_Qualification/t_trade.csv', 
-                           index_col='rowkey')
-    trade_test_df = pd.read_csv('./data/Risk_Detection_Qualification/t_trade_test.csv', 
-                                index_col='rowkey')
+#    start_t = time.time()
+#    trade_df = pd.read_csv('./data/Risk_Detection_Qualification/t_trade.csv', 
+#                           index_col='rowkey')
+#    trade_test_df = pd.read_csv('./data/Risk_Detection_Qualification/t_trade_test.csv', 
+#                                index_col='rowkey')
+#    
+#    print('trade_df dtypes is ', trade_df.dtypes)
+#    
+#    end_t = time.time()
+#    print('load cost time: ', end_t-start_t)
+#    
+#    train_num = len(trade_df)
+#    train_y = trade_df['is_risk']
+#    
+#    training_df = generate_training_dataframe()
+#    test_df = generate_test_dataframe()
+#    
+#    merged_df = training_df.append(test_df)
+#    merged_df = expand_df(merged_df)
+#    train_df = pd.concat([merged_df.iloc[:train_num], train_y], axis=1)
+#    test_df = merged_df.iloc[train_num:]
+#
+#    train_df.to_csv('./data/train_data.csv')
+#    test_df.to_csv('./data/test_data.csv')
+#    
+#    end_t = time.time()
+#    print('total cost time: ', end_t-start_t)
     
-    print('trade_df dtypes is ', trade_df.dtypes)
-    
-    end_t = time.time()
-    print('load cost time: ', end_t-start_t)
-    
-    train_num = len(trade_df)
-    train_y = trade_df['is_risk']
-    
-    training_df = generate_training_dataframe()
-    test_df = generate_test_dataframe()
-    
-    merged_df = training_df.append(test_df)
-    merged_df = expand_df(merged_df)
-    train_df = pd.concat([merged_df.iloc[:train_num], train_y], axis=1)
-    test_df = merged_df.iloc[train_num:]
-
-    train_df.to_csv('./data/train_data.csv')
-    test_df.to_csv('./data/test_data.csv')
-    
-    end_t = time.time()
-    print('total cost time: ', end_t-start_t)
+    outcome_df = pd.read_csv('./data/outcomes.csv', index_col='rowkey')
+    is_risk_df = outcome_df['is_risk']
+    is_risk_df.to_csv('./data/submmision.csv')
     
     
     
