@@ -1,6 +1,7 @@
 import numpy as np
 np.random.seed(2017)
 
+import sys
 import time
 import pickle
 
@@ -20,6 +21,11 @@ def jd_score(y_true, y_predicted, beta=0.1):
     recall = metrics.recall_score(y_true, y_predicted)
     accuracy = metrics.accuracy_score(y_true, y_predicted)
     print('precision, recall, accuracy is ', precision, recall, accuracy)
+    score = (1 + beta**2)*(precision*recall)/(beta**2*precision + recall)
+    return score
+    
+def jd_score111(precision, recall, beta=0.1):
+#    print('precision, recall, accuracy is ', precision, recall, accuracy)
     score = (1 + beta**2)*(precision*recall)/(beta**2*precision + recall)
     return score
 
@@ -43,6 +49,10 @@ def inblance_preprocessing(data_df, label_df):
     
 
 if __name__=='__main__':
+    print(jd_score111(0.91, 0.93))
+    sys.exit(0)    
+
+
     start_t = time.time()
     train_df = pd.read_csv('./data/train_data.csv', index_col='rowkey')
     X_train, X_test, y_train, y_test = train_test_split(
@@ -56,34 +66,55 @@ if __name__=='__main__':
     X_train, y_train = inblance_preprocessing(X_train, y_train)
     print('222 X_train y_train', X_train.shape, y_train.shape)
     
-    gbr = GradientBoostingClassifier(n_estimators=1000, max_depth=13, 
-                                     learning_rate=0.05,
-                                     random_state=42,
-                                     verbose=1)
+    
+    
+#    gbr = GradientBoostingClassifier(n_estimators=1000, max_depth=13, 
+#                                     learning_rate=0.05,
+#                                     random_state=42,
+#                                     verbose=1)
     
 #    gbr = GradientBoostingClassifier(n_estimators=100, max_depth=5, 
 #                                     learning_rate=0.05,
 #                                     random_state=42,
-#                                     verbose=1)
-        
+#                                     verbose=1)        
 #    gbr.fit(X_train.iloc[:4000], y_train.iloc[:4000])
-    gbr.fit(X_train, y_train)
-    print("accuracy on training set:", gbr.score(X_train, y_train))
-    
-    with open('./model_dumps/gbdt.pkl', 'wb') as f:
-        pickle.dump(gbr, f)
-    outcome = gbr.predict(X_test)
-    score = jd_score(y_test, outcome)
-    print('in validation test get score ', score)
-    
+
+#    gbr.fit(X_train, y_train)
+#    print("accuracy on training set:", gbr.score(X_train, y_train))
+#    
+#    with open('./model_dumps/gbdt.pkl', 'wb') as f:
+#        pickle.dump(gbr, f)
+#    outcome = gbr.predict(X_test)
+#    score = jd_score(y_test, outcome)
+#    print('in validation test get score ', score)
+#    
     real_test_df = pd.read_csv('./data/test_data.csv', index_col='rowkey')
-    real_predicted_outcome = gbr.predict(real_test_df)
-    real_test_df['is_risk'] = real_predicted_outcome
-    real_test_df.to_csv('./data/outcomes.csv')
+#    real_predicted_outcome = gbr.predict(real_test_df)
+#    real_test_df['is_risk'] = real_predicted_outcome
+#    real_test_df.to_csv('./data/outcomes.csv')
+
+    train_id_set = set(X_train['id'])
+    test_id_set = set(X_test['id'])
+    real_test_id_set = set(real_test_df['id'])
+    print('train_id_set > test_id_set: ', train_id_set > test_id_set)
+    print('train_id_set > real_test_id_set: ', train_id_set > real_test_id_set)
+   
+
     
+    pickle_in = open('./model_dumps/gbdt.pkl', 'rb')
+    gbt = pickle.load(pickle_in)
+    print("gbt accuracy on training set:", gbt.score(X_train, y_train))
+    training_jd_score = jd_score(y_train, gbt.predict(X_train))
+    print('training_jd_score is ', training_jd_score)
+    test_jd_score = jd_score(y_test, gbt.predict(X_test))
+    print('test_jd_score is ', test_jd_score)
+
     end_t = time.time()
     print('total cost time is ', end_t-start_t)
     
+    recall = 1
+    precision = 0.5
+    print(jd_score111(0.5, 1))
     
     
 #    svr grid_search.best_params_ is  {'learning_rate': 0.1, 'max_depth': 6, 'n_estimators': 5000}
@@ -114,10 +145,7 @@ if __name__=='__main__':
 #    print('gbr_prob is ', gbr_prob)
 #    print('shape of gbr_prob is ', gbr_prob.shape)
 
-#    pickle_in = open('./dumps/rf_regression.pkl', 'rb')
-#    rf = pickle.load(pickle_in)
-#    print("rf accuracy on training set:", rf.score(X_train, y_train))
-#    predictions0 = np.expm1(rf.predict(X_test))
+
     
     
 #    gbr_prob_frame = pd.DataFrame({'0': gbr_prob[:, 0], 

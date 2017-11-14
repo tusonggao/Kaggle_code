@@ -8,6 +8,13 @@ import matplotlib.pyplot as plt
 from sklearn import metrics
 from sklearn.model_selection import train_test_split
 
+
+#------------------------------------------------------------------------------------#
+#去除重复的登录记录
+def remove_duplicate_login_records(login_df):
+    result_df = pd.DataFrame()
+
+
     
 #------------------------------------------------------------------------------------#
 #得到本次交易最近20次登录切换城市的最小分钟数
