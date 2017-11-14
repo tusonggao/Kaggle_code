@@ -8,12 +8,71 @@ import matplotlib.pyplot as plt
 from sklearn import metrics
 from sklearn.model_selection import train_test_split
 
+#------------------------------------------------------------------------------------#
+#去除重复的登录记录 如果前后相差不到3分钟 device log_from ip city result id type is_scan都相同
+#则去掉后面这条记录
+def get_sameday_sameid_different_trade_risk(trade_df):
+    result_df = pd.DataFrame()
+    id_list = sorted(login_df['id'].unique())
+    print('len of id_list is ', len(id_list))
+    count = 0
+    for user_id in id_list:
+        count += 1
+        print('processing user_id ', user_id)
+        sub_trade_df = trade_df[trade_df['id']==user_id].sort_values(by='time', ascending = True)
+        row_num = 0
+        question_row_num_list = []
+        while row_num < len(sub_trade_df)-1:
+            rec1 = sub_trade_df.iloc[row_num]
+            rec2 = sub_trade_df.iloc[row_num+1]
+            if (compute_elaspe_time(rec1['time'], rec2['time'])<=24*60.0 and
+                rec1['is_risk']!=rec2['is_risk']):
+                question_row_num_list.append(row_num)
+            row_num += 1
+        question_sub_trade_df = sub_trade_df.iloc[question_row_num_list]
+        result_df = result_df.append(question_sub_trade_df)
+#        if count >=20:
+#            break
+    result_df.to_csv('./data/sameday_sameid_different_trade_risk.csv')
+    return result_df
+
 
 #------------------------------------------------------------------------------------#
-#去除重复的登录记录
+#去除重复的登录记录 如果前后相差不到3分钟 device log_from ip city result id type is_scan都相同
+#则去掉后面这条记录
+def is_duplicate_records(rec1, rec2):
+    check_fields = ['device', 'log_from', 'ip', 'city', 'result', 'type']
+    for field in check_fields:
+        if rec1[field] != rec2[field]:
+            return False
+    return compute_elaspe_time(rec1['time'], rec2['time']) <= 3.0 # 小于3分钟
+
 def remove_duplicate_login_records(login_df):
     result_df = pd.DataFrame()
+    id_list = sorted(login_df['id'].unique())
+    print('len of id_list is ', len(id_list))
+    count = 0
+    for user_id in id_list:
+        count += 1
+        print('processing user_id ', user_id)
+        sub_login_df = login_df[login_df['id']==user_id].sort_values(by='time', ascending = True)
+        removed_sub_login_df = pd.DataFrame()
+        row_num = 0
+        valid_row_num_list = [0]
+        while row_num < len(sub_login_df)-1:
+            if not is_duplicate_records(sub_login_df.iloc[row_num], 
+                                        sub_login_df.iloc[row_num+1]):
+                valid_row_num_list.append(row_num+1)
+            else:
+                print('skipped one row user_id row_num is ', user_id, row_num+1)
+            row_num += 1
+        removed_sub_login_df = sub_login_df.iloc[valid_row_num_list]
+        result_df = result_df.append(removed_sub_login_df)
+#        if count >=100:
+#            break
+    result_df.to_csv('./data/removed_duplicate.csv')
     return result_df
+
 
     
 #------------------------------------------------------------------------------------#
@@ -441,6 +500,10 @@ if __name__=='__main__':
                                 date_parser=dateparse)
     merged_login_df = login_df.append(login_test_df)
     
+#    remove_duplicate_login_records(merged_login_df)
+
+    get_sameday_sameid_different_trade_risk(trade_df)
+    
     
 #    get_neareast_N_change_city_min_elaspe()
 #    get_last_login_device_ip_city_elapse()
@@ -448,7 +511,7 @@ if __name__=='__main__':
 #    get_last_login_trade_time_elapse()
 #    get_whether_this_trade_same_device_ip_city()
 #    get_last3_login_info()
-    get_before_trade_trade_login_num()
+#    get_before_trade_trade_login_num()
     
     
 #    df = pd.DataFrame({'A': [1, 2, 3, 4], 'B': [2, 4, 5, np.nan], 
@@ -457,9 +520,9 @@ if __name__=='__main__':
 
     
     
-    outputdir = './features/test/'    
-    trade_df = pd.read_csv('./data/Risk_Detection_Qualification/t_trade_test.csv', 
-                           index_col='rowkey')
+#    outputdir = './features/test/'    
+#    trade_df = pd.read_csv('./data/Risk_Detection_Qualification/t_trade_test.csv', 
+#                           index_col='rowkey')
     
 #    get_neareast_N_change_city_min_elaspe() #
 #    get_last_login_device_ip_city_elapse() # 
@@ -467,7 +530,7 @@ if __name__=='__main__':
 #    get_last_login_trade_time_elapse() # 
 #    get_whether_this_trade_same_device_ip_city() #
 #    get_last3_login_info() #
-    get_before_trade_trade_login_num()
+#    get_before_trade_trade_login_num()
     
     end_t = time.time()
     print('total running cost time: ', end_t-start_t)

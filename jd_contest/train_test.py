@@ -15,6 +15,16 @@ from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.utils import shuffle as skl_shuffle
 
+def get_feature_importances(model, feature_names):
+    array = model.feature_importances_
+    importance_df = pd.DataFrame({'feature_name': feature_names, 
+                                  'importance_val': list(array)})
+    importance_df.set_index(['feature_name'], inplace=True)
+    importance_df.sort_values(by='importance_val', ascending=False,
+                              inplace=True)
+    time_str = time.strftime('%Y-%m-%d_%H_%M_%S', time.localtime())
+    importance_df.to_csv('./data/feature_importances_' + time_str + '.csv')
+
 
 def jd_score(y_true, y_predicted, beta=0.1):
     precision = metrics.precision_score(y_true, y_predicted)
@@ -29,6 +39,8 @@ def jd_score111(precision, recall, beta=0.1):
     score = (1 + beta**2)*(precision*recall)/(beta**2*precision + recall)
     return score
 
+def train_test_split_new(X_train, y_train): # 按照时间划分 1-5月作为训练集 6月数据作为测试集
+    
 def inblance_preprocessing(data_df, label_df):
     data_df = pd.concat([data_df, label_df], axis=1)
     positive_instances = data_df[data_df['is_risk']==1]
@@ -49,9 +61,9 @@ def inblance_preprocessing(data_df, label_df):
     
 
 if __name__=='__main__':
-    print(jd_score111(0.91, 0.93))
-    sys.exit(0)    
-
+#    print(time.strftime('%Y-%m-%d_%H_%M_%S', time.localtime()))
+#    print(jd_score111(0.91, 0.93))
+#    sys.exit(0)    
 
     start_t = time.time()
     train_df = pd.read_csv('./data/train_data.csv', index_col='rowkey')
@@ -66,8 +78,6 @@ if __name__=='__main__':
     X_train, y_train = inblance_preprocessing(X_train, y_train)
     print('222 X_train y_train', X_train.shape, y_train.shape)
     
-    
-    
 #    gbr = GradientBoostingClassifier(n_estimators=1000, max_depth=13, 
 #                                     learning_rate=0.05,
 #                                     random_state=42,
@@ -81,28 +91,24 @@ if __name__=='__main__':
 
 #    gbr.fit(X_train, y_train)
 #    print("accuracy on training set:", gbr.score(X_train, y_train))
-#    
-#    with open('./model_dumps/gbdt.pkl', 'wb') as f:
+    
+#    time_str = time.strftime('%Y-%m-%d_%H_%M_%S', time.localtime())
+#    with open('./model_dumps/gbdt_' + time_str + '.pkl', 'wb') as f:
 #        pickle.dump(gbr, f)
 #    outcome = gbr.predict(X_test)
 #    score = jd_score(y_test, outcome)
 #    print('in validation test get score ', score)
-#    
-    real_test_df = pd.read_csv('./data/test_data.csv', index_col='rowkey')
+#
+#    real_test_df = pd.read_csv('./data/test_data.csv', index_col='rowkey')
+    
 #    real_predicted_outcome = gbr.predict(real_test_df)
 #    real_test_df['is_risk'] = real_predicted_outcome
 #    real_test_df.to_csv('./data/outcomes.csv')
 
-    train_id_set = set(X_train['id'])
-    test_id_set = set(X_test['id'])
-    real_test_id_set = set(real_test_df['id'])
-    print('train_id_set > test_id_set: ', train_id_set > test_id_set)
-    print('train_id_set > real_test_id_set: ', train_id_set > real_test_id_set)
-   
-
     
     pickle_in = open('./model_dumps/gbdt.pkl', 'rb')
     gbt = pickle.load(pickle_in)
+    get_feature_importances(gbt, list(X_train.columns))
     print("gbt accuracy on training set:", gbt.score(X_train, y_train))
     training_jd_score = jd_score(y_train, gbt.predict(X_train))
     print('training_jd_score is ', training_jd_score)
@@ -111,10 +117,6 @@ if __name__=='__main__':
 
     end_t = time.time()
     print('total cost time is ', end_t-start_t)
-    
-    recall = 1
-    precision = 0.5
-    print(jd_score111(0.5, 1))
     
     
 #    svr grid_search.best_params_ is  {'learning_rate': 0.1, 'max_depth': 6, 'n_estimators': 5000}
