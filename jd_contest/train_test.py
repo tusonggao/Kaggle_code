@@ -72,8 +72,8 @@ def jd_score111(precision, recall, beta=0.1):
 def train_test_split_new(X_train, y_train): # 按照时间划分 1-5月作为训练集 6月数据作为测试集
     merged_df = pd.concat([X_train, y_train], axis=1)
     merged_df.sort_values(by='time', inplace=True)
-    train_part = merged_df[merged_df.time<np.datetime64('2015-05-31 23:59:59')]
-    test_part = merged_df[merged_df.time>=np.datetime64('2015-05-31 23:59:59')]
+    train_part = merged_df[merged_df.time<np.datetime64('2015-06-01 00:00:00')]
+    test_part = merged_df[merged_df.time>=np.datetime64('2015-06-01 00:00:00')]
     print('len of train_part is ', len(train_part))
     print('len of test_part is ', len(test_part))
     
@@ -86,55 +86,38 @@ def inblance_preprocessing(data_df, label_df):
     positive_instances = data_df[data_df['is_risk']==1]
     negative_instances = data_df[data_df['is_risk']==0]
     print('positive_instances negative_instances len is ', 
-          len(positive_instances), len(negative_instances),
-          'positive_instances negative_instances shape is ', 
-          positive_instances.shape, negative_instances.shape)
-
+          len(positive_instances), len(negative_instances))
+    
+    if len(positive_instances) > len(negative_instances):
+        n = int(len(positive_instances)/len(negative_instances))
+    else:
+        n = int(len(negative_instances)/len(positive_instances))
+    n = max(n, 1)
+        
     all_instances =  negative_instances
-    for _ in range(10):
+    for _ in range(n):
         all_instances = all_instances.append(positive_instances)
     print('all_instances len is ', len(all_instances),
           'shape is ', all_instances.shape)
     all_instances = skl_shuffle(all_instances)
 
     return all_instances.iloc[:, :-1], all_instances.iloc[:, -1]
-    
 
-if __name__=='__main__':
-#    print(time.strftime('%Y-%m-%d_%H_%M_%S', time.localtime()))
-#    print(jd_score111(0.91, 0.93))
-#    sys.exit(0)    
-
-    start_t = time.time()
-    dateparse = lambda x: pd.datetime.strptime(x, '%Y-%m-%d %H:%M:%S')    
-    train_df = pd.read_csv('./data/train_data.csv', index_col='rowkey',
-                           parse_dates=['time'], date_parser=dateparse)
-    print('len of train_df is ', len(train_df))
-    X_train, X_test, y_train, y_test = train_test_split_new(
-                         train_df.iloc[:, :-1], train_df.iloc[:, -1])
-    
-    X_train.drop('time', axis=1, inplace=True)
-#    X_train.drop('id', axis=1, inplace=True)
-    X_test.drop('time', axis=1, inplace=True)
-#    X_test.drop('id', axis=1, inplace=True)
-    
-    print('111 X_train X_test', X_train.shape, X_test.shape, 
-          y_train.shape, y_test.shape)
-    
-    X_train, y_train = inblance_preprocessing(X_train, y_train)
-    print('222 X_train y_train', X_train.shape, y_train.shape)
-    
-    gbdt = GradientBoostingClassifier(n_estimators=1000, max_depth=13, 
-                                     learning_rate=0.05,
-                                     random_state=42,
-                                     verbose=1)
-    gbdt.fit(X_train, y_train)
+def training_with_gbdt(max_depth, learning_rate):
+    global X_train, y_train, X_test
+    gbdt = GradientBoostingClassifier(n_estimators=100, 
+                                      max_depth=max_depth, 
+                                      learning_rate=learning_rate,
+                                      random_state=42,
+                                      verbose=1)
+#    gbdt.fit(X_train, y_train)
+    gbdt.fit(X_train.iloc[:1000], y_train.iloc[:1000])
     
 #    gbdt = GradientBoostingClassifier(n_estimators=100, max_depth=6, 
 #                                     learning_rate=0.05,
 #                                     random_state=42,
 #                                     verbose=1)        
-#    gbdt.fit(X_train.iloc[:4000], y_train.iloc[:4000])
+#    gbdt.fit(X_train.iloc[:1000], y_train.iloc[:1000])
     
     print("accuracy on training set:", gbdt.score(X_train, y_train))
     outcome = gbdt.predict(X_test)
@@ -154,10 +137,11 @@ if __name__=='__main__':
     real_test_df = pd.read_csv('./data/test_data.csv', index_col='rowkey',
                                parse_dates=['time'], date_parser=dateparse)
     real_test_df.drop('time', axis=1, inplace=True)
-#    real_test_df.drop('id', axis=1, inplace=True)
+    real_test_df.drop('id', axis=1, inplace=True)
     
     time_str = time.strftime('%Y-%m-%d_%H_%M_%S', time.localtime())
-    name_affix = time_str + '_' + str(round(score, 5))
+    name_affix = (time_str + '_' + str(round(score, 5)) + '_depth_' + 
+                  str(max_depth) + '_learningrate_' + str(learning_rate))
     store_feature_importances(gbdt, list(X_train.columns), name_affix)
     with open('./model_dumps/gbdt_' + name_affix + '.pkl', 'wb') as f:
         pickle.dump(gbdt, f)
@@ -165,9 +149,94 @@ if __name__=='__main__':
     real_test_df['is_risk'] = real_predicted_outcome
     real_test_df['is_risk'].to_csv('./data/submission/submission_'+ name_affix + '.csv')
     
+    
+    
+
+if __name__=='__main__':
+#    print(time.strftime('%Y-%m-%d_%H_%M_%S', time.localtime()))
+#    print(jd_score111(0.45, 0.090))
+#    sys.exit(0)    
+
+    start_t = time.time()
+    dateparse = lambda x: pd.datetime.strptime(x, '%Y-%m-%d %H:%M:%S')    
+    train_df = pd.read_csv('./data/train_data.csv', index_col='rowkey',
+                           parse_dates=['time'], date_parser=dateparse)
+    print('len of train_df is ', len(train_df))
+    X_train, X_test, y_train, y_test = train_test_split_new(
+                         train_df.iloc[:, :-1], train_df.iloc[:, -1])
+    
+    X_train.drop('time', axis=1, inplace=True)
+    X_train.drop('id', axis=1, inplace=True)
+    X_test.drop('time', axis=1, inplace=True)
+    X_test.drop('id', axis=1, inplace=True)
+    
+    print('111 X_train X_test', X_train.shape, X_test.shape, 
+          y_train.shape, y_test.shape)
+    
+    X_train, y_train = inblance_preprocessing(X_train, y_train)
+    print('222 X_train y_train', X_train.shape, y_train.shape)
+    
+#    gbdt = GradientBoostingClassifier(n_estimators=1000, max_depth=13, 
+#                                     learning_rate=0.05,
+#                                     random_state=42,
+#                                     verbose=1)
+    
+
+#    max_depth_list = [7, 9, 11, 13]
+#    learning_rate_list = [0.01, 0.03, 0.05, 0.07, 0.09, 0.11, 0.13]
+    max_depth_list = [7]
+    learning_rate_list = [0.01]
+    for depth in max_depth_list:
+        for rate in learning_rate_list:
+            print('preprocessing depth {} rate {}'.format(depth, rate))
+            training_with_gbdt(depth, rate)
+
+#    gbdt.fit(X_train, y_train)
+    
+#    gbdt = GradientBoostingClassifier(n_estimators=100, max_depth=6, 
+#                                     learning_rate=0.05,
+#                                     random_state=42,
+#                                     verbose=1)        
+#    gbdt.fit(X_train.iloc[:1000], y_train.iloc[:1000])
+    
+#    print("accuracy on training set:", gbdt.score(X_train, y_train))
+#    outcome = gbdt.predict(X_test)
+#    score = jd_score(y_test, outcome)
+#    print('in validation test get score ', score)
+
+#    pickle_in = open('./model_dumps/gbdt_2017-11-15_03_25_49.pkl', 'rb')
+#    gbdt = pickle.load(pickle_in)
+    
+#    print("gbt accuracy on training set:", gbdt.score(X_train, y_train))
+#    training_jd_score = jd_score(y_train, gbdt.predict(X_train))
+#    print('training_jd_score is ', training_jd_score)
+#    test_jd_score = jd_score(y_test, gbdt.predict(X_test))
+#    print('test_jd_score is ', test_jd_score)
+    
+    
+#    real_test_df = pd.read_csv('./data/test_data.csv', index_col='rowkey',
+#                               parse_dates=['time'], date_parser=dateparse)
+#    real_test_df.drop('time', axis=1, inplace=True)
+    
+#    real_test_df.drop('id', axis=1, inplace=True)
+    
+#    time_str = time.strftime('%Y-%m-%d_%H_%M_%S', time.localtime())
+#    name_affix = time_str + '_' + str(round(score, 5))
+#    store_feature_importances(gbdt, list(X_train.columns), name_affix)
+#    with open('./model_dumps/gbdt_' + name_affix + '.pkl', 'wb') as f:
+#        pickle.dump(gbdt, f)
+#    real_predicted_outcome = gbdt.predict(real_test_df)
+#    real_test_df['is_risk'] = real_predicted_outcome
+#    real_test_df['is_risk'].to_csv('./data/submission/submission_'+ name_affix + '.csv')
+    
 
     end_t = time.time()
     print('total cost time is ', end_t-start_t)
+    
+    
+    
+    
+    
     
     
 #    svr grid_search.best_params_ is  {'learning_rate': 0.1, 'max_depth': 6, 'n_estimators': 5000}

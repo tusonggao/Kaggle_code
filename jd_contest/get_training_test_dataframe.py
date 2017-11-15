@@ -6,39 +6,45 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 def add_features(data_df, features_dir):
-    df = pd.read_csv(features_dir + 'change_city_min_elaspe.csv',
-                     index_col='rowkey', dtype={'id': np.str})
+    df = pd.read_csv(features_dir + 'change_city_min_elaspe.csv', index_col='rowkey')
     data_df['change_city_min_elaspe'] = df['change_city_min_elaspe']
 
 
     df = pd.read_csv(features_dir + 'last_login_device_ip_city_elapse.csv',
-                     index_col='rowkey', dtype={'id': np.str})
+                     index_col='rowkey')
     data_df[['last_device_elapse', 'last_ip_elapse', 'last_city_elapse']] = df[['last_device_elapse', 'last_ip_elapse', 'last_city_elapse']]
 
     df = pd.read_csv(features_dir + 'whether_today_first_trade_login.csv',
-                     index_col='rowkey', dtype={'id': np.str})
+                     index_col='rowkey')
     data_df[['today_first_trade', 'today_first_login']] = df[['today_first_trade', 'today_first_login']]
 
 
     df = pd.read_csv(features_dir + 'last_login_trade_time_elapse.csv',
-                     index_col='rowkey', dtype={'id': np.str})
+                     index_col='rowkey')
     data_df[['last_trade_elapse', 'last_login_elapse', 'trade_login_elapse']] = df[['last_trade_elapse', 'last_login_elapse', 'trade_login_elapse']]
 
 
     df = pd.read_csv(features_dir + 'whether_this_trade_new_device_ip_city.csv',
-                     index_col='rowkey', dtype={'id': np.str})
+                     index_col='rowkey')
     data_df[['same_device', 'same_ip', 'same_city']] = df[['same_device', 'same_ip', 'same_city']]
 
-    df = pd.read_csv(features_dir + 'last3_login_info.csv',
-                     index_col='rowkey', dtype={'id': np.str})
+    df = pd.read_csv(features_dir + 'last3_login_info.csv', index_col='rowkey')
     data_df[['time_long1', 'time_long2', 'time_long3']] = df[['time_long1', 'time_long2', 'time_long3']]
     data_df[['log_from1', 'log_from2', 'log_from3']] = df[['log_from1', 'log_from2', 'log_from3']]
     data_df[['result1', 'result2', 'result3']] = df[['result1', 'result2', 'result3']]
     data_df[['is_scan1', 'is_scan2', 'is_scan3']] = df[['is_scan1', 'is_scan2', 'is_scan3']]
 
-    df = pd.read_csv(features_dir + 'before_trade_trade_login_num.csv',
-                     index_col='rowkey', dtype={'id': np.str})
+    df = pd.read_csv(features_dir + 'before_trade_trade_login_num.csv', index_col='rowkey')
     data_df[['before_trade_num', 'before_login_num']] = df[['before_trade_num', 'before_login_num']]
+
+    df = pd.read_csv(features_dir + 'from_2015_1_1_minutes_num.csv', index_col='rowkey')
+    data_df['from_2015_1_1_minutes_num'] = df['from_2015_1_1_minutes_num']
+    
+    df = pd.read_csv(features_dir + 'from_last_login_trade_num.csv', index_col='rowkey')
+    data_df['from_last_login_trade_num'] = df['from_last_login_trade_num']
+
+    df = pd.read_csv(features_dir + 'whether_between_1_and_7_am.csv', index_col='rowkey')
+    data_df['between_1_and_7_am'] = df['between_1_and_7_am']
 
     return data_df
 
@@ -106,9 +112,7 @@ if __name__=='__main__':
     test_df.to_csv('./data/test_data.csv')
     
     end_t = time.time()
-    print('total cost time: ', end_t-start_t)
-    
-    
+    print('total cost time: ', end_t-start_t)    
     
     
     
