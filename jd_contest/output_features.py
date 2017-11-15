@@ -176,9 +176,9 @@ def compute_last_time(device, ip, city, last_login_time, login_df):
 
 #计算间隔时间，以分钟计算 会包含小数点部分 time1 time2 为 np.datetime64 类型
 def compute_elaspe_time(time1, time2):
-    if isinstance(time1, str):
+    if not isinstance(time1, np.datetime64):
         time1 = np.datetime64(time1)
-    if isinstance(time2, str):
+    if not isinstance(time2, np.datetime64):
         time2 = np.datetime64(time2)
     if time1 > time2:
         time1, time2 = time2, time1
@@ -270,6 +270,7 @@ def get_last_login_trade_time_elapse():
         login_sub_df = login_sub_df[login_sub_df.time<=trade_time]
         if login_sub_df.shape[0]>=1:
             login_t = login_sub_df['time'].values[-1]
+#            print('type of login_t and trade_time is ', type(login_t), type(trade_time))
             elapse_t = compute_elaspe_time(login_t, trade_time)
             trade_login_elapse_list.append(elapse_t)
             if login_sub_df.shape[0]>1:
@@ -540,8 +541,6 @@ def is_between_1_and_7_am(dt):
     
     
 if __name__=='__main__':
-
-    df = pd.DataFrame
 #    sys.exit(0)
     
 #    trade_df = pd.read_csv('./data/Risk_Detection_Qualification/t_trade.csv', 
@@ -574,9 +573,10 @@ if __name__=='__main__':
 #    remove_duplicate_login_records(merged_login_df)
 #    get_sameday_sameid_different_trade_risk(trade_df)
     
-    get_neareast_N_change_city_min_elaspe()
-    get_last_login_device_ip_city_elapse()
-    get_whether_today_first_trade_login()
+#    get_neareast_N_change_city_min_elaspe()
+#    get_last_login_device_ip_city_elapse()
+#    get_whether_today_first_trade_login()
+    
     get_last_login_trade_time_elapse()
     get_whether_this_trade_same_device_ip_city()
     get_last3_login_info()
