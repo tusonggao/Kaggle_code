@@ -19,6 +19,7 @@ from sklearn.utils import shuffle as skl_shuffle
 import xgboost as xgb
 from xgboost.sklearn import XGBClassifier
 
+
 def modelfit(alg, dtrain, predictors,useTrainCV=True, cv_folds=5, early_stopping_rounds=50):
     if useTrainCV:
         xgb_param = alg.get_xgb_params()
@@ -42,7 +43,6 @@ def modelfit(alg, dtrain, predictors,useTrainCV=True, cv_folds=5, early_stopping
     feat_imp = pd.Series(alg.booster().get_fscore()).sort_values(ascending=False)
     feat_imp.plot(kind='bar', title='Feature Importances')
     plt.ylabel('Feature Importance Score')
-
     
 
 def store_feature_importances(model, feature_names, name_affix=None):
@@ -104,14 +104,14 @@ def inblance_preprocessing(data_df, label_df):
     return all_instances.iloc[:, :-1], all_instances.iloc[:, -1]
 
 def training_with_gbdt(max_depth, learning_rate):
-    global X_train, y_train, X_test
-    gbdt = GradientBoostingClassifier(n_estimators=100, 
+    global X_train, y_train, X_test, real_test_df
+    gbdt = GradientBoostingClassifier(n_estimators=600, 
                                       max_depth=max_depth, 
                                       learning_rate=learning_rate,
                                       random_state=42,
                                       verbose=1)
-#    gbdt.fit(X_train, y_train)
-    gbdt.fit(X_train.iloc[:1000], y_train.iloc[:1000])
+    gbdt.fit(X_train, y_train)
+#    gbdt.fit(X_train.iloc[:1000], y_train.iloc[:1000])
     
 #    gbdt = GradientBoostingClassifier(n_estimators=100, max_depth=6, 
 #                                     learning_rate=0.05,
@@ -132,12 +132,6 @@ def training_with_gbdt(max_depth, learning_rate):
 #    print('training_jd_score is ', training_jd_score)
 #    test_jd_score = jd_score(y_test, gbdt.predict(X_test))
 #    print('test_jd_score is ', test_jd_score)
-    
-    
-    real_test_df = pd.read_csv('./data/test_data.csv', index_col='rowkey',
-                               parse_dates=['time'], date_parser=dateparse)
-    real_test_df.drop('time', axis=1, inplace=True)
-    real_test_df.drop('id', axis=1, inplace=True)
     
     time_str = time.strftime('%Y-%m-%d_%H_%M_%S', time.localtime())
     name_affix = (time_str + '_' + str(round(score, 5)) + '_depth_' + 
@@ -166,9 +160,14 @@ if __name__=='__main__':
                          train_df.iloc[:, :-1], train_df.iloc[:, -1])
     
     X_train.drop('time', axis=1, inplace=True)
-    X_train.drop('id', axis=1, inplace=True)
+#    X_train.drop('id', axis=1, inplace=True)
     X_test.drop('time', axis=1, inplace=True)
-    X_test.drop('id', axis=1, inplace=True)
+#    X_test.drop('id', axis=1, inplace=True)
+    
+    real_test_df = pd.read_csv('./data/test_data.csv', index_col='rowkey',
+                               parse_dates=['time'], date_parser=dateparse)
+    real_test_df.drop('time', axis=1, inplace=True)
+#    real_test_df.drop('id', axis=1, inplace=True)
     
     print('111 X_train X_test', X_train.shape, X_test.shape, 
           y_train.shape, y_test.shape)
@@ -182,10 +181,11 @@ if __name__=='__main__':
 #                                     verbose=1)
     
 
+    max_depth_list = [13]
 #    max_depth_list = [7, 9, 11, 13]
-#    learning_rate_list = [0.01, 0.03, 0.05, 0.07, 0.09, 0.11, 0.13]
-    max_depth_list = [7]
-    learning_rate_list = [0.01]
+    learning_rate_list = [0.01, 0.03, 0.05, 0.07, 0.09, 0.11, 0.13]
+#    max_depth_list = [7]
+#    learning_rate_list = [0.01]
     for depth in max_depth_list:
         for rate in learning_rate_list:
             print('preprocessing depth {} rate {}'.format(depth, rate))
