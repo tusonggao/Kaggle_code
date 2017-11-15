@@ -2,6 +2,7 @@ import numpy as np
 np.random.seed(2017)
 
 import time
+import sys
 import pandas as pd
 import matplotlib.pyplot as plt
 
@@ -68,8 +69,8 @@ def remove_duplicate_login_records(login_df):
             row_num += 1
         removed_sub_login_df = sub_login_df.iloc[valid_row_num_list]
         result_df = result_df.append(removed_sub_login_df)
-#        if count >=100:
-#            break
+        if count >=100:
+            break
     result_df.to_csv('./data/removed_duplicate.csv')
     return result_df
 
@@ -446,38 +447,103 @@ def get_before_trade_trade_login_num():
     trade_df_new['before_trade_num'] = np.array(trade_num_list)
     trade_df_new['before_login_num'] = np.array(login_num_list)
     trade_df_new.to_csv(outputdir + 'before_trade_trade_login_num.csv')   
+    
+#------------------------------------------------------------------------------------#
+#得到本次交易距离2015-01-01 00:00:00的分钟数
+def get_from_2015_1_1_minutes_num():
+    global trade_df, outputdir
+    trade_df_new = trade_df.copy()
+    trade_df_new['from_2015_1_1_minutes_num'] = trade_df['time'].apply(
+        lambda x: compute_elaspe_time(x, np.datetime64('2015-01-01 00:00:00')))
+    trade_df_new.to_csv(outputdir + 'from_2015_1_1_minutes_num.csv')
 
 #------------------------------------------------------------------------------------#
-#得到该id在这之前30天的总交易次数、总登录次数
-def get_before_30days_trade_login_num():
+#得到该id在这本次交易和最后一次登录之间的总交易次数
+def get_from_last_login_trade_num():  
     global trade_df, merged_login_df, outputdir
     trade_df_new = trade_df.copy()
     trade_df_new = trade_df_new.sort_values(by='time')
-    trade_df_new = trade_df_new.iloc[:100]
-    trade_num_list, login_num_list = [], []
+#    trade_df_new = trade_df_new.iloc[:100]
+    trade_num_list= []
     count = 0
     print('starting computing')
     start_t = time.time()
     for index, row in trade_df_new.iterrows():
-        print('get_before_trade_trade_login_num compute ', count)
+        print('get_from_last_login_trade_num compute ', count)
         count += 1
         trade_time = row['time']
         user_id = row['id']
-        trade_sub_df = trade_df_new[trade_df_new.id==user_id]
-        trade_sub_df = trade_sub_df[trade_sub_df.time<=trade_time]
-        trade_num_list.append(len(trade_sub_df))
-
         login_sub_df = merged_login_df[merged_login_df.id==user_id].sort_values(by='time')
         login_sub_df = login_sub_df[login_sub_df.time<=trade_time]
-        login_num_list.append(len(login_sub_df))
+        if login_sub_df.shape[0]>0:
+            last_login_dt = login_sub_df['time'].values[-1]
+        else:
+            last_login_dt = np.datetime64('2015-01-01 00:00:00')
+        trade_sub_df = trade_df_new[trade_df_new.id==user_id]
+        trade_sub_df = trade_sub_df[trade_sub_df.time<trade_time]
+        trade_sub_df = trade_sub_df[trade_sub_df.time>=last_login_dt]
+        trade_num_list.append(trade_sub_df.shape[0])
     end_t = time.time()
     print('cost time is ', end_t-start_t)
-    trade_df_new['before_trade_num'] = np.array(trade_num_list)
-    trade_df_new['before_login_num'] = np.array(login_num_list)
-    trade_df_new.to_csv(outputdir + 'before_30days_trade_login_num.csv')
+    trade_df_new['from_last_login_trade_num'] = np.array(trade_num_list)
+    trade_df_new.to_csv(outputdir + 'from_last_login_trade_num.csv')   
+    
+#------------------------------------------------------------------------------------#
+#得到本次交易是否发生在凌晨1点到7点之间，如果是为1，否则为0
+def get_whether_between_1_and_7_am():
+    start_t = time.time()
+    global trade_df, outputdir
+    trade_df_new = trade_df.copy()
+    trade_df_new['between_1_and_7_am'] = trade_df['time'].apply(
+         lambda x: is_between_1_and_7_am(x))
+    end_t = time.time()
+    trade_df_new.to_csv(outputdir + 'whether_between_1_and_7_am.csv')
+    print('get_whether_between_1_and_7_am cost time is ', end_t-start_t)
+    
+
+def is_between_1_and_7_am(dt):
+    dt_index = pd.DatetimeIndex([dt])
+    year, month, day = dt_index.year[0], dt_index.month[0], dt_index.day[0]
+    dt_start = np.datetime64('%04d-%02d-%02d 01:00:00'%(year, month, day))
+    dt_end = np.datetime64('%04d-%02d-%02d 07:00:00'%(year, month, day))
+    return dt>=dt_start and dt<=dt_end
+    
+
+#------------------------------------------------------------------------------------#
+#得到该id在这之前30天的总交易次数、总登录次数
+#def get_before_30days_trade_login_num():
+#    global trade_df, merged_login_df, outputdir
+#    trade_df_new = trade_df.copy()
+#    trade_df_new = trade_df_new.sort_values(by='time')
+#    trade_df_new = trade_df_new.iloc[:100]
+#    trade_num_list, login_num_list = [], []
+#    count = 0
+#    print('starting computing')
+#    start_t = time.time()
+#    for index, row in trade_df_new.iterrows():
+#        print('get_before_trade_trade_login_num compute ', count)
+#        count += 1
+#        trade_time = row['time']
+#        user_id = row['id']
+#        trade_sub_df = trade_df_new[trade_df_new.id==user_id]
+#        trade_sub_df = trade_sub_df[trade_sub_df.time<=trade_time]
+#        trade_num_list.append(len(trade_sub_df))
+#
+#        login_sub_df = merged_login_df[merged_login_df.id==user_id].sort_values(by='time')
+#        login_sub_df = login_sub_df[login_sub_df.time<=trade_time]
+#        login_num_list.append(len(login_sub_df))
+#    end_t = time.time()
+#    print('cost time is ', end_t-start_t)
+#    trade_df_new['before_trade_num'] = np.array(trade_num_list)
+#    trade_df_new['before_login_num'] = np.array(login_num_list)
+#    trade_df_new.to_csv(outputdir + 'before_30days_trade_login_num.csv')
     
     
 if __name__=='__main__':
+
+    df = pd.DataFrame
+#    sys.exit(0)
+    
 #    trade_df = pd.read_csv('./data/Risk_Detection_Qualification/t_trade.csv', 
 #                           index_col='rowkey', dtype={'id': np.str})
 #    login_df = pd.read_csv('./data/Risk_Detection_Qualification/t_login.csv', 
@@ -490,47 +556,55 @@ if __name__=='__main__':
     
     outputdir = './features/train/'
     trade_df = pd.read_csv('./data/Risk_Detection_Qualification/t_trade.csv', 
-                           index_col='rowkey')
-    
-    login_df = pd.read_csv('./data/Risk_Detection_Qualification/t_login.csv', 
-                           index_col='log_id', parse_dates=['time'], 
+                           index_col='rowkey', parse_dates=['time'],
                            date_parser=dateparse)
-    login_test_df = pd.read_csv('./data/Risk_Detection_Qualification/t_login_test.csv', 
+    
+#    login_df = pd.read_csv('./data/Risk_Detection_Qualification/t_login.csv', 
+#                           index_col='log_id', parse_dates=['time'], 
+#                           date_parser=dateparse)
+#    login_test_df = pd.read_csv('./data/Risk_Detection_Qualification/t_login_test.csv', 
+#                                index_col='log_id', parse_dates=['time'],
+#                                date_parser=dateparse)
+#    merged_login_df = login_df.append(login_test_df)
+
+    merged_login_df = pd.read_csv('./data/removed_duplicate.csv', 
                                 index_col='log_id', parse_dates=['time'],
                                 date_parser=dateparse)
-    merged_login_df = login_df.append(login_test_df)
     
 #    remove_duplicate_login_records(merged_login_df)
-
-    get_sameday_sameid_different_trade_risk(trade_df)
+#    get_sameday_sameid_different_trade_risk(trade_df)
     
-    
-#    get_neareast_N_change_city_min_elaspe()
-#    get_last_login_device_ip_city_elapse()
-#    get_whether_today_first_trade_login()
-#    get_last_login_trade_time_elapse()
-#    get_whether_this_trade_same_device_ip_city()
-#    get_last3_login_info()
-#    get_before_trade_trade_login_num()
+    get_neareast_N_change_city_min_elaspe()
+    get_last_login_device_ip_city_elapse()
+    get_whether_today_first_trade_login()
+    get_last_login_trade_time_elapse()
+    get_whether_this_trade_same_device_ip_city()
+    get_last3_login_info()
+    get_before_trade_trade_login_num()
+    get_from_2015_1_1_minutes_num()
+#    get_from_last_login_trade_num()
+#    get_whether_between_1_and_7_am()
     
     
 #    df = pd.DataFrame({'A': [1, 2, 3, 4], 'B': [2, 4, 5, np.nan], 
 #                       'C': [100, 200, 300, np.nan]})
 #    df.to_csv('test_output111.csv')
 
+    outputdir = './features/test/'    
+    trade_df = pd.read_csv('./data/Risk_Detection_Qualification/t_trade_test.csv', 
+                           index_col='rowkey', parse_dates=['time'],
+                           date_parser=dateparse)
     
-    
-#    outputdir = './features/test/'    
-#    trade_df = pd.read_csv('./data/Risk_Detection_Qualification/t_trade_test.csv', 
-#                           index_col='rowkey')
-    
-#    get_neareast_N_change_city_min_elaspe() #
-#    get_last_login_device_ip_city_elapse() # 
-#    get_whether_today_first_trade_login() #
-#    get_last_login_trade_time_elapse() # 
-#    get_whether_this_trade_same_device_ip_city() #
-#    get_last3_login_info() #
-#    get_before_trade_trade_login_num()
+    get_neareast_N_change_city_min_elaspe() 
+    get_last_login_device_ip_city_elapse() 
+    get_whether_today_first_trade_login() 
+    get_last_login_trade_time_elapse() 
+    get_whether_this_trade_same_device_ip_city() 
+    get_last3_login_info() #
+    get_before_trade_trade_login_num()
+    get_from_2015_1_1_minutes_num()
+    get_from_last_login_trade_num()
+    get_whether_between_1_and_7_am()
     
     end_t = time.time()
     print('total running cost time: ', end_t-start_t)
