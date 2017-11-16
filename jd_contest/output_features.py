@@ -510,6 +510,67 @@ def is_between_1_and_7_am(dt):
     return dt>=dt_start and dt<=dt_end
     
 
+def check_835072_device():
+    global trade_df, merged_login_df, outputdir
+    trade_df_new = trade_df.copy()
+    trade_df_new = trade_df_new.sort_values(by='time')
+#    trade_df_new = trade_df_new.iloc[:100]
+    check_list= []
+    count = 0
+    print('starting computing')
+    start_t = time.time()
+    for index, row in trade_df_new.iterrows():
+        print('check_835072_device compute ', count)
+        count += 1
+        trade_time = row['time']
+        user_id = row['id']
+        login_sub_df = merged_login_df[merged_login_df.id==user_id].sort_values(by='time')
+        login_sub_df = login_sub_df[login_sub_df.time<=trade_time]
+        check_status = False
+        if login_sub_df.shape[0]>0:
+            last_login_device = login_sub_df['device'].values[-1]
+            if last_login_device==835072:
+                check_status = True
+        check_list.append(check_status)
+    end_t = time.time()
+    print('cost time is ', end_t-start_t)
+    trade_sub_df = trade_df_new[np.array(check_list)]
+    trade_sub_df.to_csv(outputdir + 'check_835072_device.csv')
+
+def check_different_device_ip_city():
+    global trade_df, merged_login_df, outputdir
+    trade_df_new = trade_df.copy()
+    trade_df_new = trade_df_new.sort_values(by='time')
+#    trade_df_new = trade_df_new.iloc[:100]
+    check_list= []
+    count = 0
+    print('starting computing')
+    start_t = time.time()
+    for index, row in trade_df_new.iterrows():
+        print('check_different_device_ip_city compute ', count)
+        count += 1
+        trade_time = row['time']
+        user_id = row['id']
+        login_sub_df = merged_login_df[merged_login_df.id==user_id].sort_values(by='time')
+        login_sub_df = login_sub_df[login_sub_df.time<=trade_time]
+        check_status = False
+        if login_sub_df.shape[0]>1:
+            login_device = login_sub_df['device'].values[-1]
+            last_login_device = login_sub_df['device'].values[-2]
+            login_ip = login_sub_df['ip'].values[-1]
+            last_login_ip = login_sub_df['ip'].values[-2]
+            login_city = login_sub_df['city'].values[-1]
+            last_login_city = login_sub_df['city'].values[-2]
+            login_result = login_sub_df['result'].values[-1]
+            if (login_device!=last_login_device and login_ip!=last_login_ip 
+                and login_city!=last_login_city and login_result==-2):
+                check_status = True
+        check_list.append(check_status)
+    end_t = time.time()
+    print('cost time is ', end_t-start_t)
+    trade_sub_df = trade_df_new[np.array(check_list)]
+    trade_sub_df.to_csv(outputdir + 'different_device_ip_city_with_result.csv')
+    
 #------------------------------------------------------------------------------------#
 #得到该id在这之前30天的总交易次数、总登录次数
 #def get_before_30days_trade_login_num():
@@ -570,6 +631,9 @@ if __name__=='__main__':
                                 index_col='log_id', parse_dates=['time'],
                                 date_parser=dateparse)
     
+#    check_835072_device()
+    check_different_device_ip_city()
+    
 #    remove_duplicate_login_records(merged_login_df)
 #    get_sameday_sameid_different_trade_risk(trade_df)
     
@@ -577,11 +641,11 @@ if __name__=='__main__':
 #    get_last_login_device_ip_city_elapse()
 #    get_whether_today_first_trade_login()
     
-    get_last_login_trade_time_elapse()
-    get_whether_this_trade_same_device_ip_city()
-    get_last3_login_info()
-    get_before_trade_trade_login_num()
-    get_from_2015_1_1_minutes_num()
+#    get_last_login_trade_time_elapse()
+#    get_whether_this_trade_same_device_ip_city()
+#    get_last3_login_info()
+#    get_before_trade_trade_login_num()
+#    get_from_2015_1_1_minutes_num()
 #    get_from_last_login_trade_num()
 #    get_whether_between_1_and_7_am()
     
@@ -590,21 +654,21 @@ if __name__=='__main__':
 #                       'C': [100, 200, 300, np.nan]})
 #    df.to_csv('test_output111.csv')
 
-    outputdir = './features/test/'    
-    trade_df = pd.read_csv('./data/Risk_Detection_Qualification/t_trade_test.csv', 
-                           index_col='rowkey', parse_dates=['time'],
-                           date_parser=dateparse)
+#    outputdir = './features/test/'    
+#    trade_df = pd.read_csv('./data/Risk_Detection_Qualification/t_trade_test.csv', 
+#                           index_col='rowkey', parse_dates=['time'],
+#                           date_parser=dateparse)
     
-    get_neareast_N_change_city_min_elaspe() 
-    get_last_login_device_ip_city_elapse() 
-    get_whether_today_first_trade_login() 
-    get_last_login_trade_time_elapse() 
-    get_whether_this_trade_same_device_ip_city() 
-    get_last3_login_info() #
-    get_before_trade_trade_login_num()
-    get_from_2015_1_1_minutes_num()
-    get_from_last_login_trade_num()
-    get_whether_between_1_and_7_am()
+#    get_neareast_N_change_city_min_elaspe() 
+#    get_last_login_device_ip_city_elapse() 
+#    get_whether_today_first_trade_login() 
+#    get_last_login_trade_time_elapse() 
+#    get_whether_this_trade_same_device_ip_city() 
+#    get_last3_login_info() #
+#    get_before_trade_trade_login_num()
+#    get_from_2015_1_1_minutes_num()
+#    get_from_last_login_trade_num()
+#    get_whether_between_1_and_7_am()
     
     end_t = time.time()
     print('total running cost time: ', end_t-start_t)
