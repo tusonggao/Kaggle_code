@@ -592,16 +592,19 @@ def get_device_ip_city_sum_num():
     
     
 if __name__=='__main__':
-    sss = pd.Series({'a': 3, 'b': 4, 'c': 5, 'd': 8})
-    df1 = pd.DataFrame({'name': ['a', 'a', 'a', 'c', 'd', 'b', 'd'],
-                     'value':[12, 23, 33, 44, 55, 66, 77],
-                     'ttt':[111, 222, 333, 444, 555, 666, 777]})
-    df2 = pd.DataFrame({'name': ['d', 'b', 'a', 'c', 'd', 'a', 'c'],
-                     'value':[121, 231, 331, 441, 551, 661, 771]})
-    df_merged = pd.melt(df1)
+#    print(sys.version)
+#    sss = pd.Series({'a': 3, 'b': 8, 'c': 5, 'd': 2})
+#    sss.plot(kind='bar')
+    
+#    df1 = pd.DataFrame({'name': ['a', 'a', 'a', 'c', 'd', 'b', 'd'],
+#                     'value':[12, 23, 33, 44, 55, 66, 77],
+#                     'ttt':[111, 222, 333, 444, 555, 666, 777]})
+#    df2 = pd.DataFrame({'name': ['d', 'b', 'a', 'c', 'd', 'a', 'c'],
+#                     'value':[121, 231, 331, 441, 551, 661, 771]})
+#    df_merged = pd.melt(df1)
 #    df_merged = pd.concat([df1, df2]).reset_index()
-    print(df_merged)
-    sys.exit(0)
+#    print(df_merged)
+#    sys.exit(0)
     
 #    trade_df = pd.read_csv('./data/Risk_Detection_Qualification/t_trade.csv', 
 #                           index_col='rowkey', dtype={'id': np.str})

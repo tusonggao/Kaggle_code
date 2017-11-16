@@ -86,7 +86,6 @@ def inblance_preprocessing(data_df, label_df):
     data_df = pd.concat([data_df, label_df], axis=1)
     positive_instances = data_df[data_df['is_risk']==1]
     negative_instances = data_df[data_df['is_risk']==0]
-    weight_arr = np.where(data_df['is_risk']==1, 1, 0.0283)
     print('positive_instances negative_instances len is ', 
           len(positive_instances), len(negative_instances))
     
@@ -102,42 +101,31 @@ def inblance_preprocessing(data_df, label_df):
     print('all_instances len is ', len(all_instances),
           'shape is ', all_instances.shape)
     all_instances = skl_shuffle(all_instances)
-
     return all_instances.iloc[:, :-1], all_instances.iloc[:, -1]
 
-def training_with_gbdt(max_depth, learning_rate):
+def training_with_gbdt(max_depth, learning_rate, n_estimators=600,
+                       sample_weight=None):
     global X_train, y_train, X_test, real_test_df
-    gbdt = GradientBoostingClassifier(n_estimators=600, 
+    print('in training_with_gbdt, max_depth={}, learning_rate={} n_estimators={}'.format(
+          max_depth, learning_rate, n_estimators))
+    
+    gbdt = GradientBoostingClassifier(n_estimators=n_estimators, 
                                       max_depth=max_depth, 
                                       learning_rate=learning_rate,
                                       random_state=42,
                                       verbose=1)
-    gbdt.fit(X_train, y_train)
-#    gbdt.fit(X_train.iloc[:1000], y_train.iloc[:1000])
-    
-#    gbdt = GradientBoostingClassifier(n_estimators=100, max_depth=6, 
-#                                     learning_rate=0.05,
-#                                     random_state=42,
-#                                     verbose=1)        
-#    gbdt.fit(X_train.iloc[:1000], y_train.iloc[:1000])
+    gbdt.fit(X_train, y_train, sample_weight=sample_weight)
+#    gbdt.fit(X_train.iloc[:1000], y_train.iloc[:1000], sample_weight=sample_weight[:1000])
     
     print("accuracy on training set:", gbdt.score(X_train, y_train))
     outcome = gbdt.predict(X_test)
     score = jd_score(y_test, outcome)
     print('in validation test get score ', score)
-
-#    pickle_in = open('./model_dumps/gbdt_2017-11-15_03_25_49.pkl', 'rb')
-#    gbdt = pickle.load(pickle_in)
-    
-#    print("gbt accuracy on training set:", gbdt.score(X_train, y_train))
-#    training_jd_score = jd_score(y_train, gbdt.predict(X_train))
-#    print('training_jd_score is ', training_jd_score)
-#    test_jd_score = jd_score(y_test, gbdt.predict(X_test))
-#    print('test_jd_score is ', test_jd_score)
     
     time_str = time.strftime('%Y-%m-%d_%H_%M_%S', time.localtime())
     name_affix = ('gbdt_' + time_str + '_' + str(round(score, 5)) + '_depth_' + 
-                  str(max_depth) + '_learningrate_' + str(learning_rate))
+                  str(max_depth) + '_learningrate_' + str(learning_rate) +
+                  '_n_estimators_' + str(n_estimators))
     store_feature_importances(gbdt, list(X_train.columns), name_affix)
     with open('./model_dumps/gbdt_' + name_affix + '.pkl', 'wb') as f:
         pickle.dump(gbdt, f)
@@ -149,6 +137,9 @@ def training_with_gbdt(max_depth, learning_rate):
 
 def training_with_rf(n_estimators=4000, min_samples_leaf=3, sample_weight=None):
     global X_train, y_train, X_test, real_test_df
+    print('in training_with_rf, n_estimators={}, min_samples_leaf={}'.format(
+          n_estimators, min_samples_leaf))
+    
     rf = RandomForestClassifier(n_estimators=n_estimators,
                                 n_jobs=1,
                                 random_state=42,
@@ -156,10 +147,8 @@ def training_with_rf(n_estimators=4000, min_samples_leaf=3, sample_weight=None):
                                 oob_score=True,
                                 verbose=1
                                 )
-    print('in training_with_rf, n_estimators={}, min_samples_leaf={}'.format(
-          n_estimators, min_samples_leaf))
     rf.fit(X_train, y_train, sample_weight=sample_weight)
-#    rf.fit(X_train.iloc[:1000], y_train.iloc[:1000])
+#    rf.fit(X_train.iloc[:1000], y_train.iloc[:1000], sample_weight=sample_weight[:1000])
     outcome = rf.predict(X_test)
     score = jd_score(y_test, outcome)
     print('in random forest validation test get score ', score)
@@ -174,7 +163,6 @@ def training_with_rf(n_estimators=4000, min_samples_leaf=3, sample_weight=None):
     outcome_df = real_test_df.copy()
     outcome_df['is_risk'] = real_predicted_outcome
     outcome_df['is_risk'].to_csv('./data/submission/submission_'+ name_affix + '.csv')
-    
     
 
 if __name__=='__main__':
@@ -193,42 +181,36 @@ if __name__=='__main__':
     weight_arr = np.where(y_train==1, 1, 0.0283)
     print(weight_arr)
     
-    
     X_train.drop('time', axis=1, inplace=True)
-#    X_train.drop('id', axis=1, inplace=True)
+    X_train.drop('id', axis=1, inplace=True)
     X_test.drop('time', axis=1, inplace=True)
-#    X_test.drop('id', axis=1, inplace=True)
+    X_test.drop('id', axis=1, inplace=True)
     
     real_test_df = pd.read_csv('./data/test_data.csv', index_col='rowkey',
                                parse_dates=['time'], date_parser=dateparse)
     real_test_df.drop('time', axis=1, inplace=True)
-#    real_test_df.drop('id', axis=1, inplace=True)
+    real_test_df.drop('id', axis=1, inplace=True)
     
     print('111 X_train X_test', X_train.shape, X_test.shape, 
           y_train.shape, y_test.shape)
-    
-    
     
 #    X_train, y_train = inblance_preprocessing(X_train, y_train)
 #    print('222 X_train y_train', X_train.shape, y_train.shape)
     
     
-#    gbdt = GradientBoostingClassifier(n_estimators=1000, max_depth=13, 
-#                                     learning_rate=0.05,
-#                                     random_state=42,
-#                                     verbose=1)
-    
-    training_with_rf(sample_weight=weight_arr)
+#    training_with_rf(sample_weight=weight_arr)
 
-#    max_depth_list = [13]
-##    max_depth_list = [7, 9, 11, 13]
+    max_depth_list = [13]
+    learning_rate_list = [0.13]
+
+#    max_depth_list = [7, 9, 11, 13]
 #    learning_rate_list = [0.01, 0.03, 0.05, 0.07, 0.09, 0.11, 0.13]
-##    max_depth_list = [7]
-##    learning_rate_list = [0.01]
-#    for depth in max_depth_list:
-#        for rate in learning_rate_list:
-#            print('preprocessing depth {} rate {}'.format(depth, rate))
-#            training_with_gbdt(depth, rate)
+#    max_depth_list = [7]
+
+    for depth in max_depth_list:
+        for rate in learning_rate_list:
+            training_with_gbdt(depth, rate, n_estimators=1000,
+                               sample_weight=weight_arr)
 
 #    gbdt.fit(X_train, y_train)
     
@@ -254,9 +236,7 @@ if __name__=='__main__':
 #    print('test_jd_score is ', test_jd_score)
 #    X_test['predicted_risk'] = X_test_predicted_outcome
 #    X_test['is_risk'] = y_test
-#    X_test[['predicted_risk', 'is_risk', 'id']].to_csv('./data/submission/test_predicted_outcomes.csv')
-    
-    
+#    X_test[['predicted_risk', 'is_risk', 'id']].to_csv('./data/submission/test_predicted_outcomes.csv')   
     
 #    real_test_df = pd.read_csv('./data/test_data.csv', index_col='rowkey',
 #                               parse_dates=['time'], date_parser=dateparse)
@@ -280,9 +260,17 @@ if __name__=='__main__':
     
     
     
+
+#    pickle_in = open('./model_dumps/gbdt_2017-11-15_03_25_49.pkl', 'rb')
+#    gbdt = pickle.load(pickle_in)
     
+#    print("gbt accuracy on training set:", gbdt.score(X_train, y_train))
+#    training_jd_score = jd_score(y_train, gbdt.predict(X_train))
+#    print('training_jd_score is ', training_jd_score)
+#    test_jd_score = jd_score(y_test, gbdt.predict(X_test))
+#    print('test_jd_score is ', test_jd_score)    
     
-    
+
 #    svr grid_search.best_params_ is  {'learning_rate': 0.1, 'max_depth': 6, 'n_estimators': 5000}
 #svr grid_search.best_score_ is  0.848484848485
 #best score is  0.997755331089
