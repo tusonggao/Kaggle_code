@@ -104,11 +104,18 @@ def inblance_preprocessing(data_df, label_df):
     return all_instances.iloc[:, :-1], all_instances.iloc[:, -1]
 
 def training_with_gbdt(max_depth, learning_rate, n_estimators=600,
-                       sample_weight=None):
+                       negative_weight_ratio=0.5):
     global X_train, y_train, X_test, real_test_df
-    print('in training_with_gbdt, max_depth={}, learning_rate={} n_estimators={}'.format(
-          max_depth, learning_rate, n_estimators))
-    
+    print('in training_with_gbdt, max_depth={}, learning_rate={} '
+          'n_estimators={} negative_weight_ratio={}'.format(
+          max_depth, learning_rate, n_estimators, negative_weight_ratio))
+#    weight_arr = np.where(y_train==1, 1, 0.0283)
+    positive_instances = y_train[y_train==1]
+    negative_instances = y_train[y_train==0]
+    negative_weight = (negative_weight_ratio*len(positive_instances)/
+                       len(negative_instances))
+
+    sample_weight = np.where(y_train==1, 1, negative_weight)
     gbdt = GradientBoostingClassifier(n_estimators=n_estimators, 
                                       max_depth=max_depth, 
                                       learning_rate=learning_rate,
@@ -125,7 +132,8 @@ def training_with_gbdt(max_depth, learning_rate, n_estimators=600,
     time_str = time.strftime('%Y-%m-%d_%H_%M_%S', time.localtime())
     name_affix = ('gbdt_' + time_str + '_' + str(round(score, 5)) + '_depth_' + 
                   str(max_depth) + '_learningrate_' + str(learning_rate) +
-                  '_n_estimators_' + str(n_estimators))
+                  '_n_estimators_' + str(n_estimators) + 
+                  '_negative_weight_ratio_' + str(negative_weight_ratio))
     store_feature_importances(gbdt, list(X_train.columns), name_affix)
     with open('./model_dumps/gbdt_' + name_affix + '.pkl', 'wb') as f:
         pickle.dump(gbdt, f)
@@ -177,9 +185,10 @@ if __name__=='__main__':
     print('len of train_df is ', len(train_df))
     X_train, X_test, y_train, y_test = train_test_split_new(
                          train_df.iloc[:, :-1], train_df.iloc[:, -1])
+    print('y_train is ', type(y_train))
     
-    weight_arr = np.where(y_train==1, 1, 0.0283)
-    print(weight_arr)
+#    weight_arr = np.where(y_train==1, 1, 0.0283)
+#    print(weight_arr)
     
     X_train.drop('time', axis=1, inplace=True)
     X_train.drop('id', axis=1, inplace=True)
@@ -201,7 +210,7 @@ if __name__=='__main__':
 #    training_with_rf(sample_weight=weight_arr)
 
     max_depth_list = [13]
-    learning_rate_list = [0.13]
+    learning_rate_list = [0.09]
 
 #    max_depth_list = [7, 9, 11, 13]
 #    learning_rate_list = [0.01, 0.03, 0.05, 0.07, 0.09, 0.11, 0.13]
@@ -210,7 +219,7 @@ if __name__=='__main__':
     for depth in max_depth_list:
         for rate in learning_rate_list:
             training_with_gbdt(depth, rate, n_estimators=1000,
-                               sample_weight=weight_arr)
+                               negative_weight_ratio=1.0)
 
 #    gbdt.fit(X_train, y_train)
     

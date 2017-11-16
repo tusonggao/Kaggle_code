@@ -591,6 +591,7 @@ def get_device_ip_city_sum_num():
         outputdir + 'device_ip_city_sum_num.csv')
     
     
+    
 if __name__=='__main__':
 #    print(sys.version)
 #    sss = pd.Series({'a': 3, 'b': 8, 'c': 5, 'd': 2})
