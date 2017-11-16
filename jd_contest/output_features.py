@@ -572,37 +572,36 @@ def check_different_device_ip_city():
     trade_sub_df.to_csv(outputdir + 'different_device_ip_city_with_result.csv')
     
 #------------------------------------------------------------------------------------#
-#得到该id在这之前30天的总交易次数、总登录次数
-#def get_before_30days_trade_login_num():
-#    global trade_df, merged_login_df, outputdir
-#    trade_df_new = trade_df.copy()
-#    trade_df_new = trade_df_new.sort_values(by='time')
-#    trade_df_new = trade_df_new.iloc[:100]
-#    trade_num_list, login_num_list = [], []
-#    count = 0
-#    print('starting computing')
-#    start_t = time.time()
-#    for index, row in trade_df_new.iterrows():
-#        print('get_before_trade_trade_login_num compute ', count)
-#        count += 1
-#        trade_time = row['time']
-#        user_id = row['id']
-#        trade_sub_df = trade_df_new[trade_df_new.id==user_id]
-#        trade_sub_df = trade_sub_df[trade_sub_df.time<=trade_time]
-#        trade_num_list.append(len(trade_sub_df))
-#
-#        login_sub_df = merged_login_df[merged_login_df.id==user_id].sort_values(by='time')
-#        login_sub_df = login_sub_df[login_sub_df.time<=trade_time]
-#        login_num_list.append(len(login_sub_df))
-#    end_t = time.time()
-#    print('cost time is ', end_t-start_t)
-#    trade_df_new['before_trade_num'] = np.array(trade_num_list)
-#    trade_df_new['before_login_num'] = np.array(login_num_list)
-#    trade_df_new.to_csv(outputdir + 'before_30days_trade_login_num.csv')
+#得到该id所登陆过的device、ip、city总数
+# merged_login_df['log_from'].unique().size
+def get_device_ip_city_sum_num():
+    global trade_df, merged_login_df, outputdir
+    start_t = time.time()
+    trade_df_new = trade_df.copy()
+    device_count_s = merged_login_df.groupby(['id', 'device']).size().to_frame().reset_index().groupby('id').size()
+    trade_df_new['device_sum_num'] = device_count_s[trade_df_new['id']].values
+    ip_count_s = merged_login_df.groupby(['id', 'ip']).size().to_frame().reset_index().groupby('id').size()
+    trade_df_new['ip_sum_num'] = ip_count_s[trade_df_new['id']].values
+    city_count_s = merged_login_df.groupby(['id', 'city']).size().to_frame().reset_index().groupby('id').size()
+    trade_df_new['city_sum_num'] = city_count_s[trade_df_new['id']].values
+    end_t = time.time()
+    print('cost time is ', end_t-start_t)
+
+    trade_df_new[['id', 'device_sum_num', 'ip_sum_num', 'city_sum_num']].to_csv(
+        outputdir + 'device_ip_city_sum_num.csv')
     
     
 if __name__=='__main__':
-#    sys.exit(0)
+    sss = pd.Series({'a': 3, 'b': 4, 'c': 5, 'd': 8})
+    df1 = pd.DataFrame({'name': ['a', 'a', 'a', 'c', 'd', 'b', 'd'],
+                     'value':[12, 23, 33, 44, 55, 66, 77],
+                     'ttt':[111, 222, 333, 444, 555, 666, 777]})
+    df2 = pd.DataFrame({'name': ['d', 'b', 'a', 'c', 'd', 'a', 'c'],
+                     'value':[121, 231, 331, 441, 551, 661, 771]})
+    df_merged = pd.melt(df1)
+#    df_merged = pd.concat([df1, df2]).reset_index()
+    print(df_merged)
+    sys.exit(0)
     
 #    trade_df = pd.read_csv('./data/Risk_Detection_Qualification/t_trade.csv', 
 #                           index_col='rowkey', dtype={'id': np.str})
@@ -632,7 +631,8 @@ if __name__=='__main__':
                                 date_parser=dateparse)
     
 #    check_835072_device()
-    check_different_device_ip_city()
+#    check_different_device_ip_city()
+    get_device_ip_city_sum_num()
     
 #    remove_duplicate_login_records(merged_login_df)
 #    get_sameday_sameid_different_trade_risk(trade_df)
