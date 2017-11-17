@@ -1,5 +1,5 @@
 import numpy as np
-np.random.seed(2017)
+#np.random.seed(2017)
 
 import sys
 import time
@@ -19,6 +19,8 @@ from sklearn.utils import shuffle as skl_shuffle
 
 import xgboost as xgb
 from xgboost.sklearn import XGBClassifier
+
+#gbdt最优参数 13 0.09
 
 
 def modelfit(alg, dtrain, predictors,useTrainCV=True, cv_folds=5, early_stopping_rounds=50):
@@ -70,6 +72,30 @@ def jd_score111(precision, recall, beta=0.1):
     score = (1 + beta**2)*(precision*recall)/(beta**2*precision + recall)
     return score
 
+#def get_AB_test_score(y_test, y_predicted):
+#    index_arr = np.random.shuffle(np.arange(0, len(y_test)))
+#    index_A, index_B = np.split(index_arr, 2)
+#    return index_A, index_B
+#    score = jd_score(y_test, y_predicted)
+#    score_a = jd_score(y_test[index_A], y_predicted[index_A])
+#    score_b = jd_score(y_test[index_B], y_predicted[index_B])
+#    return score, score_a, score_b
+    
+def get_AB_test_score(y_test, y_predicted):
+    index_arr = np.arange(0, len(y_test))
+    np.random.shuffle(index_arr)
+    index_A, index_B = np.split(index_arr, 2)
+    print('len A B is', len(index_A), len(index_B))
+    
+    y_test.index = np.arange(0, len(y_test))
+    score = jd_score(y_test, y_predicted)
+    score_a = jd_score(y_test[index_A], y_predicted[index_A])
+    score_b = jd_score(y_test[index_B], y_predicted[index_B])
+    print('jd score for test score: {} score_a: {} score_b: {}'.format(
+          score, score_a, score_b))
+    return score, score_a, score_b
+    
+
 def train_test_split_new(X_train, y_train): # 按照时间划分 1-5月作为训练集 6月数据作为测试集
     merged_df = pd.concat([X_train, y_train], axis=1)
     merged_df.sort_values(by='time', inplace=True)
@@ -103,30 +129,87 @@ def inblance_preprocessing(data_df, label_df):
     all_instances = skl_shuffle(all_instances)
     return all_instances.iloc[:, :-1], all_instances.iloc[:, -1]
 
+def training_with_xgboost(max_depth, learning_rate, n_estimators=600,
+                          subsample=1.0):
+    start_t = time.time()
+    global X_train, y_train, X_test, y_test, real_test_df
+    xgbc = XGBClassifier(
+        silent=0 ,#设置成1则没有运行信息输出，最好是设置为0.是否在运行升级时打印消息。
+        #nthread=4,# cpu 线程数 默认最大
+        learning_rate=learning_rate, # 如同学习率
+        min_child_weight=1,
+        # 这个参数默认是 1，是每个叶子里面 h 的和至少是多少，对正负样本不均衡时的 0-1 分类而言
+        #，假设 h 在 0.01 附近，min_child_weight 为 1 意味着叶子节点中最少需要包含 100 个样本。
+        #这个参数非常影响结果，控制叶子节点中二阶导的和的最小值，该参数值越小，越容易 overfitting。
+        max_depth=max_depth, # 构建树的深度，越大越容易过拟合
+        gamma=0,  # 树的叶子节点上作进一步分区所需的最小损失减少,越大越保守，一般0.1、0.2这样子。
+        subsample=subsample, # 随机采样训练样本 训练实例的子采样比
+        max_delta_step=0,#最大增量步长，我们允许每个树的权重估计。
+        colsample_bytree=1, # 生成树时进行的列采样
+        reg_lambda=1,  # 控制模型复杂度的权重值的L2正则化项参数，参数越大，模型越不容易过拟合。
+        #reg_alpha=0, # L1 正则项参数
+        #scale_pos_weight=1, #如果取值大于0的话，在类别样本不平衡的情况下有助于快速收敛。平衡正负权重
+        #objective= 'multi:softmax', #多分类的问题 指定学习任务和相应的学习目标
+        #num_class=10, # 类别数，多分类与 multisoftmax 并用
+        n_estimators=n_estimators, #树的个数
+        seed=1000 #随机种子
+        #eval_metric= 'auc'
+    )
+    
+    xgbc.fit(X_train, y_train, eval_metric='auc')
+    
+    print("xgb accuracy on training set:", xgbc.score(X_train, y_train))
+    outcome = xgbc.predict(X_test)
+    score, score_a, score_b = get_AB_test_score(y_test, outcome)
+#    score = jd_score(y_test, outcome)
+    print('in validation test get score ', score)
+    
+    time_str = time.strftime('%Y-%m-%d_%H_%M_%S', time.localtime())
+    name_affix = ('xgb_' + time_str + '_' + str(round(score, 5)) + 
+                  '_depth_' + str(max_depth) + 
+                  '_learningrate_' + str(learning_rate) +
+                  '_n_estimators_' + str(n_estimators) + 
+                  '_subsample_' + str(subsample))
+    store_feature_importances(xgbc, list(X_train.columns), name_affix)
+    with open('./model_dumps/xgb_' + name_affix + '.pkl', 'wb') as f:
+        pickle.dump(xgbc, f)
+    real_predicted_outcome = xgbc.predict(real_test_df)
+    outcome_df = real_test_df.copy()
+    outcome_df['is_risk'] = real_predicted_outcome
+    outcome_df['is_risk'].to_csv('./data/submission/submission_'+ name_affix + '.csv')
+    end_t = time.time()
+    print('in training_with_xgboost, this round cost: ', end_t-start_t)
+    
+    
+
 def training_with_gbdt(max_depth, learning_rate, n_estimators=600,
-                       subsample=1.0, negative_weight_ratio=0.5):
-    global X_train, y_train, X_test, real_test_df
+                       subsample=1.0, negative_weight_ratio=1.0):
+    global X_train, y_train, X_test, y_test, real_test_df
     print('in training_with_gbdt, max_depth={}, learning_rate={} '
-          'n_estimators={} negative_weight_ratio={}'.format(
-          max_depth, learning_rate, n_estimators, negative_weight_ratio))
+          'n_estimators={} subsample={} negative_weight_ratio={}'.format(
+          max_depth, learning_rate, n_estimators, subsample, 
+          negative_weight_ratio))
 #    weight_arr = np.where(y_train==1, 1, 0.0283)
     positive_instances = y_train[y_train==1]
     negative_instances = y_train[y_train==0]
     negative_weight = (negative_weight_ratio*len(positive_instances)/
                        len(negative_instances))
+    print('negative_weight is ', negative_weight)
 
     sample_weight = np.where(y_train==1, 1, negative_weight)
     gbdt = GradientBoostingClassifier(n_estimators=n_estimators, 
                                       max_depth=max_depth, 
+                                      subsample=subsample,
                                       learning_rate=learning_rate,
                                       random_state=42,
                                       verbose=1)
-#    gbdt.fit(X_train, y_train, sample_weight=sample_weight)
-    gbdt.fit(X_train.iloc[:1000], y_train.iloc[:1000], sample_weight=sample_weight[:1000])
+    gbdt.fit(X_train, y_train, sample_weight=sample_weight)
+#    gbdt.fit(X_train.iloc[:1000], y_train.iloc[:1000], sample_weight=sample_weight[:1000])
     
     print("accuracy on training set:", gbdt.score(X_train, y_train))
     outcome = gbdt.predict(X_test)
-    score = jd_score(y_test, outcome)
+    score, score_a, score_b = get_AB_test_score(y_test, outcome)
+#    score = jd_score(y_test, outcome)
     print('in validation test get score ', score)
     
     time_str = time.strftime('%Y-%m-%d_%H_%M_%S', time.localtime())
@@ -184,9 +267,13 @@ def filter_out_features(dfs):
     
 
 if __name__=='__main__':
+#    arr = np.array([12, 32, 33, 59, 67, 98, 102, 44, 55])
+#    index_arr = np.array([1, 3, 4])
+#    print(arr[index_arr])
 #    print(time.strftime('%Y-%m-%d_%H_%M_%S', time.localtime()))
 #    print(jd_score111(0.45, 0.090))
-#    sys.exit(0)    
+#    sys.exit(0)  
+      
 
     start_t = time.time()
     dateparse = lambda x: pd.datetime.strptime(x, '%Y-%m-%d %H:%M:%S')    
@@ -212,10 +299,12 @@ if __name__=='__main__':
 #    learning_rate_list = [0.01, 0.03, 0.05, 0.07, 0.09, 0.11, 0.13]
 #    max_depth_list = [7]
 
-    for depth in max_depth_list:
-        for rate in learning_rate_list:
-            training_with_gbdt(depth, rate, n_estimators=100,
-                               subsample=0.7, negative_weight_ratio=1.0)
+#    for depth in max_depth_list:
+#        for rate in learning_rate_list:
+#            training_with_gbdt(depth, rate, n_estimators=2000,
+#                               subsample=0.9, negative_weight_ratio=1.0)
+            
+    training_with_xgboost(13, 0.09, n_estimators=1000, subsample=0.9)
 
 #    gbdt.fit(X_train, y_train)
     
@@ -230,13 +319,18 @@ if __name__=='__main__':
 #    score = jd_score(y_test, outcome)
 #    print('in validation test get score ', score)
 
-#    pickle_in = open('./model_dumps/gbdt_2017-11-15_19_22_31_0.48542.pkl', 'rb')
+#    pickle_in = open('./model_dumps/gbdt_gbdt_2017-11-17_11_16_42_0.4254_depth_13_learningrate_0.09_n_estimators_1000_subsample_0.9_negative_weight_ratio_1.0.pkl', 'rb')
 #    gbdt = pickle.load(pickle_in)
 #    
 #    print("gbt accuracy on training set:", gbdt.score(X_train, y_train))
 #    training_jd_score = jd_score(y_train, gbdt.predict(X_train))
 #    print('training_jd_score is ', training_jd_score)
 #    X_test_predicted_outcome = gbdt.predict(X_test)
+#    score, score_a, score_b = get_AB_test_score(y_test, X_test_predicted_outcome)
+    
+#    score = jd_score(y_test, X_test_predicted_outcome)
+#    print('score is ', score)
+    
 #    test_jd_score = jd_score(y_test, X_test_predicted_outcome)
 #    print('test_jd_score is ', test_jd_score)
 #    X_test['predicted_risk'] = X_test_predicted_outcome

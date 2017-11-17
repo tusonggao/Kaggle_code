@@ -487,7 +487,7 @@ def get_from_last_login_trade_num():
     end_t = time.time()
     print('cost time is ', end_t-start_t)
     trade_df_new['from_last_login_trade_num'] = np.array(trade_num_list)
-    trade_df_new.to_csv(outputdir + 'from_last_login_trade_num.csv')   
+    trade_df_new.to_csv(outputdir + 'from_last_login_trade_num.csv')
     
 #------------------------------------------------------------------------------------#
 #得到本次交易是否发生在凌晨1点到7点之间，如果是为1，否则为0
