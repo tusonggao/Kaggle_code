@@ -649,7 +649,7 @@ def get_till_now_device_ip_city_sum_num():
     trade_df_new = trade_df.copy()
     trade_df_new = trade_df_new.sort_values(by='time')
 #    trade_df_new = trade_df_new.iloc[:100]
-    check_list= []
+    device_num_list, ip_num_list, city_num_list = [], [], []
     count = 0
     print('starting computing')
     start_t = time.time()
@@ -660,25 +660,22 @@ def get_till_now_device_ip_city_sum_num():
         user_id = row['id']
         login_sub_df = merged_login_df[merged_login_df.id==user_id].sort_values(by='time')
         login_sub_df = login_sub_df[login_sub_df.time<=trade_time]
-        check_status = False
         if login_sub_df.shape[0]>1:
-            login_device = login_sub_df['device'].values[-1]
-            last_login_device = login_sub_df['device'].values[-2]
-            login_ip = login_sub_df['ip'].values[-1]
-            last_login_ip = login_sub_df['ip'].values[-2]
-            login_city = login_sub_df['city'].values[-1]
-            last_login_city = login_sub_df['city'].values[-2]
-            login_result = login_sub_df['result'].values[-1]
-            if (login_device!=last_login_device and login_ip!=last_login_ip 
-                and login_city!=last_login_city and login_result==-2):
-                check_status = True
-        check_list.append(check_status)
-    end_t = time.time()
-    trade_sub_df = trade_df_new[np.array(check_list)]
+            login_device_num = len(set(login_sub_df['device'].values()))
+            login_ip_num = len(set(login_sub_df['ip'].values()))
+            login_city_num = len(set(login_sub_df['city'].values()))
+        else:
+            login_device_num, login_ip_num, login_city_num = 0, 0, 0
+        device_num_list.append(login_device_num)
+        ip_num_list.append(login_ip_num)
+        city_num_list.append(login_city_num)
+
+    trade_df_new['till_now_login_device_num'] = np.array(device_num_list)
+    trade_df_new['till_now_login_ip_num'] = np.array(ip_num_list)
+    trade_df_new['till_now_login_city_num'] = np.array(city_num_list)
     print('cost time is ', end_t-start_t)
 
-    trade_df_new[['id', 'device_sum_num', 'ip_sum_num', 'city_sum_num']].to_csv(
-        outputdir + 'till_now_device_ip_city_sum_num.csv')
+    trade_df_new.to_csv(outputdir + 'till_now_device_ip_city_sum_num.csv')
 
 
 ############################################################################################################
