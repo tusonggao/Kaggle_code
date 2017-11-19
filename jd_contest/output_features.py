@@ -572,8 +572,55 @@ def check_different_device_ip_city():
     trade_sub_df.to_csv(outputdir + 'different_device_ip_city_with_result.csv')
     
 #------------------------------------------------------------------------------------#
-#得到该id所登陆过的device、ip、city总数
-# merged_login_df['log_from'].unique().size
+#得到该id截止本次交易所登陆过的不同的device、ip、city数
+def get_till_now_device_ip_city_sum_num():
+    global trade_df, merged_login_df, outputdir
+    start_t = time.time()
+    trade_df_new = trade_df.copy()
+    trade_df_new = trade_df_new.sort_values(by='time')
+#    trade_df_new = trade_df_new.iloc[:100]
+    check_list= []
+    count = 0
+    print('starting computing')
+    start_t = time.time()
+    for index, row in trade_df_new.iterrows():
+        print('check_different_device_ip_city compute ', count)
+        count += 1
+        trade_time = row['time']
+        user_id = row['id']
+        login_sub_df = merged_login_df[merged_login_df.id==user_id].sort_values(by='time')
+        login_sub_df = login_sub_df[login_sub_df.time<=trade_time]
+        check_status = False
+        if login_sub_df.shape[0]>1:
+            login_device = login_sub_df['device'].values[-1]
+            last_login_device = login_sub_df['device'].values[-2]
+            login_ip = login_sub_df['ip'].values[-1]
+            last_login_ip = login_sub_df['ip'].values[-2]
+            login_city = login_sub_df['city'].values[-1]
+            last_login_city = login_sub_df['city'].values[-2]
+            login_result = login_sub_df['result'].values[-1]
+            if (login_device!=last_login_device and login_ip!=last_login_ip 
+                and login_city!=last_login_city and login_result==-2):
+                check_status = True
+        check_list.append(check_status)
+    end_t = time.time()
+    trade_sub_df = trade_df_new[np.array(check_list)]
+    print('cost time is ', end_t-start_t)
+
+    trade_df_new[['id', 'device_sum_num', 'ip_sum_num', 'city_sum_num']].to_csv(
+        outputdir + 'till_now_device_ip_city_sum_num.csv')
+
+
+############################################################################################################
+###------------------------------------------------------------------------------------------------------###
+###------------------------------------------下面为穿越特征 ----------------------------------------------###
+###------------------------------------------------------------------------------------------------------###
+############################################################################################################
+
+
+
+#------------------------------------------------------------------------------------#
+#得到该id所登陆过的不同的device、ip、city数
 def get_device_ip_city_sum_num():
     global trade_df, merged_login_df, outputdir
     start_t = time.time()
@@ -588,7 +635,7 @@ def get_device_ip_city_sum_num():
     print('cost time is ', end_t-start_t)
 
     trade_df_new[['id', 'device_sum_num', 'ip_sum_num', 'city_sum_num']].to_csv(
-        outputdir + 'device_ip_city_sum_num.csv')
+        outputdir + 'till_now_device_ip_city_sum_num.csv')
     
     
     
@@ -622,15 +669,15 @@ if __name__=='__main__':
                            index_col='rowkey', parse_dates=['time'],
                            date_parser=dateparse)
     
-#    login_df = pd.read_csv('./data/Risk_Detection_Qualification/t_login.csv', 
-#                           index_col='log_id', parse_dates=['time'], 
-#                           date_parser=dateparse)
-#    login_test_df = pd.read_csv('./data/Risk_Detection_Qualification/t_login_test.csv', 
-#                                index_col='log_id', parse_dates=['time'],
-#                                date_parser=dateparse)
-#    merged_login_df = login_df.append(login_test_df)
+    login_df = pd.read_csv('./data/Risk_Detection_Qualification/t_login.csv', 
+                           index_col='log_id', parse_dates=['time'], 
+                           date_parser=dateparse)
+    login_test_df = pd.read_csv('./data/Risk_Detection_Qualification/t_login_test.csv', 
+                                index_col='log_id', parse_dates=['time'],
+                                date_parser=dateparse)
+    merged_login_df = login_df.append(login_test_df)
 
-    merged_login_df = pd.read_csv('./data/removed_duplicate.csv', 
+    removed_duplicate_merged_login_df = pd.read_csv('./data/removed_duplicate.csv', 
                                 index_col='log_id', parse_dates=['time'],
                                 date_parser=dateparse)
     
@@ -687,7 +734,7 @@ if __name__=='__main__':
     
     
     
-    
+# merged_login_df['log_from'].unique().size
     
     
     

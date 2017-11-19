@@ -132,6 +132,9 @@ def inblance_preprocessing(data_df, label_df):
 def training_with_xgboost(max_depth, learning_rate, n_estimators=600,
                           subsample=1.0):
     start_t = time.time()
+    print('in training_with_gbdt, max_depth={}, learning_rate={} '
+          'n_estimators={} subsample={}'.format(
+          max_depth, learning_rate, n_estimators, subsample))
     global X_train, y_train, X_test, y_test, real_test_df
     xgbc = XGBClassifier(
         silent=0 ,#设置成1则没有运行信息输出，最好是设置为0.是否在运行升级时打印消息。
@@ -293,18 +296,20 @@ if __name__=='__main__':
 #    training_with_rf(sample_weight=weight_arr)
 
     max_depth_list = [13]
-    learning_rate_list = [0.09]
+    learning_rate_list = [0.07, 0.09, 0.11, 0.13]
 
 #    max_depth_list = [7, 9, 11, 13]
 #    learning_rate_list = [0.01, 0.03, 0.05, 0.07, 0.09, 0.11, 0.13]
 #    max_depth_list = [7]
 
-#    for depth in max_depth_list:
-#        for rate in learning_rate_list:
+    for depth in max_depth_list:
+        for rate in learning_rate_list:
+            if depth==13 and rate==0.09:
+                continue
 #            training_with_gbdt(depth, rate, n_estimators=2000,
-#                               subsample=0.9, negative_weight_ratio=1.0)
-            
-    training_with_xgboost(13, 0.09, n_estimators=1000, subsample=0.9)
+#                               subsample=0.9, negative_weight_ratio=1.0)            
+            training_with_xgboost(depth, rate, n_estimators=2000, 
+                                  subsample=0.9)
 
 #    gbdt.fit(X_train, y_train)
     
