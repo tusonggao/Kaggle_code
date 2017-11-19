@@ -590,7 +590,7 @@ def get_till_now_login_trade_num():
     print('starting computing')
     start_t = time.time()
     for index, row in trade_df_new.iterrows():
-        print('get_from_last_login_trade_num compute ', count)
+        print('get_till_now_login_trade_num compute ', count)
         count += 1
         trade_time, user_id = row['time'], row['id']
         trade_sub_df = trade_df_new[trade_df_new.id==user_id]
@@ -654,13 +654,13 @@ def get_till_now_device_ip_city_sum_num():
     print('starting computing')
     start_t = time.time()
     for index, row in trade_df_new.iterrows():
-        print('check_different_device_ip_city compute ', count)
+        print('get_till_now_device_ip_city_sum_num compute ', count)
         count += 1
         trade_time = row['time']
         user_id = row['id']
         login_sub_df = merged_login_df[merged_login_df.id==user_id].sort_values(by='time')
         login_sub_df = login_sub_df[login_sub_df.time<=trade_time]
-        if login_sub_df.shape[0]>1:
+        if login_sub_df.shape[0]>=1:
             login_device_num = len(set(login_sub_df['device'].values()))
             login_ip_num = len(set(login_sub_df['ip'].values()))
             login_city_num = len(set(login_sub_df['city'].values()))
@@ -673,8 +673,9 @@ def get_till_now_device_ip_city_sum_num():
     trade_df_new['till_now_login_device_num'] = np.array(device_num_list)
     trade_df_new['till_now_login_ip_num'] = np.array(ip_num_list)
     trade_df_new['till_now_login_city_num'] = np.array(city_num_list)
+    
+    end_t = time.time()
     print('cost time is ', end_t-start_t)
-
     trade_df_new.to_csv(outputdir + 'till_now_device_ip_city_sum_num.csv')
 
 
@@ -683,33 +684,108 @@ def get_till_now_device_ip_city_sum_num():
 ###------------------------------------------下面为穿越特征 ----------------------------------------------###
 ###------------------------------------------------------------------------------------------------------###
 ############################################################################################################
+############################################################################################################
 
+#------------------------------------------------------------------------------------#
+#该id未来一天内的总交易次数，总登录次数，总交易次数/(总登录次数+1)比值
+#该id未来三天内的总交易次数，总登录次数，总交易次数/(总登录次数+1)比值
+#该id未来七天内的总交易次数，总登录次数，总交易次数/(总登录次数+1)比值
+#该id未来三十天内的总交易次数，总登录次数，总交易次数/(总登录次数+1)比值
+#该id今天的总交易次数，总登录次数，总交易次数/(总登录次数+1)比值
+#该id这个月的总交易次数，总登录次数，总交易次数/(总登录次数+1)比值
+#该id总交易次数，总登录次数，总交易次数/(总登录次数+1)比值
+def get_cy_login_trade_num():
+    global trade_df, merged_login_df, outputdir
+    trade_df_new = trade_df.copy()
+    trade_df_new = trade_df_new.sort_values(by='time')  # trade_df_new = trade_df_new.iloc[:100]
+    trade_num_list_1day, login_num_list_1day = [], []
+    trade_num_list_3day, login_num_list_3day = [], []
+    trade_num_list_7day, login_num_list_7day = [], []
+    trade_num_list_same_day, login_num_list_same_day = [], []
+    trade_num_list_same_month, login_num_list_same_month = [], []
+    trade_num_list_total, login_num_list_total = [], []
+    
+    count = 0
+    print('starting computing')
+    start_t = time.time()
+    for index, row in trade_df_new.iterrows():
+        print('get_till_now_login_trade_num compute ', count)
+        count += 1
+        trade_time, user_id = row['time'], row['id']
+        trade_sub_df = trade_df_new[trade_df_new.id==user_id]
+        login_sub_df = merged_login_df[merged_login_df.id==user_id]
+        day_num_list = [1, 3, 7]
+        login_num_lists = [login_num_list_1day, login_num_list_3day,
+                           login_num_list_7day]
+        trade_num_lists = [trade_num_list_1day, trade_num_list_3day,
+                           trade_num_list_7day]
+        for num, login_l, trade_l in zip(day_num_list, login_num_lists, trade_num_lists):
+            login_n, trade_n = handle_cy_num_day(num, trade_time, login_sub_df, trade_sub_df)
+            login_l.append(login_n)
+            trade_l.append(trade_n)
+    end_t = time.time()
+    print('cost time is ', end_t-start_t)
+    
+    trade_df_new['till_now_1day_login_num'] = np.array(login_num_list_1day)
+    trade_df_new['till_now_1day_trade_num'] = np.array(trade_num_list_1day)
+    trade_df_new['till_now_1day_trade_login_ratio'] = trade_df_new['till_now_1day_trade_num']/(trade_df_new['till_now_1day_login_num'] + 1)
+    
+    trade_df_new['till_now_3day_login_num'] = np.array(login_num_list_3day)
+    trade_df_new['till_now_3day_trade_num'] = np.array(trade_num_list_3day)
+    trade_df_new['till_now_3day_trade_login_ratio'] = trade_df_new['till_now_3day_trade_num']/(trade_df_new['till_now_3day_login_num'] + 1)
+    
+    trade_df_new['till_now_7day_login_num'] = np.array(login_num_list_7day)
+    trade_df_new['till_now_7day_trade_num'] = np.array(trade_num_list_7day)
+    trade_df_new['till_now_7day_trade_login_ratio'] = trade_df_new['till_now_7day_trade_num']/(trade_df_new['till_now_7day_login_num'] + 1)
+    
+    trade_df_new['till_now_30day_login_num'] = np.array(login_num_list_30day)
+    trade_df_new['till_now_30day_trade_num'] = np.array(trade_num_list_30day)
+    trade_df_new['till_now_30day_trade_login_ratio'] = trade_df_new['till_now_30day_trade_num']/(trade_df_new['till_now_30day_login_num'] + 1)
+    
+    trade_df_new['till_now_history_login_num'] = np.array(login_num_list_history)
+    trade_df_new['till_now_history_trade_num'] = np.array(trade_num_list_history)
+    trade_df_new['till_now_history_trade_login_ratio'] = trade_df_new['till_now_history_trade_num']/(trade_df_new['till_now_history_login_num'] + 1)
+    
+    trade_df_new.to_csv(outputdir + 'till_now_login_trade_num(.csv')
 
+def handle_cy_num_day(day_num, trade_time, login_sub_df, trade_sub_df):
+    early_t = trade_time + np.timedelta64(day_num, 'D')
+    earlier_than_login = login_sub_df.time <= trade_time
+    later_than_login = login_sub_df.time > early_t
+    earlier_than_trade = trade_sub_df.time <= trade_time
+    later_than_trade = trade_sub_df.time > early_t
+    return (len(login_sub_df[earlier_than_login & later_than_login]),
+            len(trade_sub_df[earlier_than_trade & later_than_trade]))
+
+def handle_cy_same_date():
+    pass
+    
+def handle_cy_same_month():
+    pass
 
 #------------------------------------------------------------------------------------#
 #得到该id所登陆过的不同的device、ip、city数
-def get_device_ip_city_sum_num():
+def get_cy_device_ip_city_sum_num():
     global trade_df, merged_login_df, outputdir
     start_t = time.time()
     trade_df_new = trade_df.copy()
     device_count_s = merged_login_df.groupby(['id', 'device']).size().to_frame().reset_index().groupby('id').size()
-    trade_df_new['device_sum_num'] = device_count_s[trade_df_new['id']].values
+    trade_df_new['cy_device_sum_num'] = device_count_s[trade_df_new['id']].values
     ip_count_s = merged_login_df.groupby(['id', 'ip']).size().to_frame().reset_index().groupby('id').size()
-    trade_df_new['ip_sum_num'] = ip_count_s[trade_df_new['id']].values
+    trade_df_new['cy_ip_sum_num'] = ip_count_s[trade_df_new['id']].values
     city_count_s = merged_login_df.groupby(['id', 'city']).size().to_frame().reset_index().groupby('id').size()
-    trade_df_new['city_sum_num'] = city_count_s[trade_df_new['id']].values
+    trade_df_new['cy_city_sum_num'] = city_count_s[trade_df_new['id']].values
     end_t = time.time()
     print('cost time is ', end_t-start_t)
 
-    trade_df_new[['id', 'device_sum_num', 'ip_sum_num', 'city_sum_num']].to_csv(
-        outputdir + 'till_now_device_ip_city_sum_num.csv')
+    trade_df_new[['id', 'cy_device_sum_num', 'cy_ip_sum_num', 'cy_city_sum_num']].to_csv(
+        outputdir + 'cy_device_ip_city_sum_num.csv')
     
     
     
 if __name__=='__main__':
-    a = np.timedelta64(1, 'Y')
-    b_t = np.datetime64('2011-06-15 12:23:00') - np.timedelta64(12, 'D')
-    print('b_t is ', b_t)
+    set_ss = set(np.array([]))
+    print('set_ss is ', set_ss)
     
 #    print(sys.version)
 #    sss = pd.Series({'a': 3, 'b': 8, 'c': 5, 'd': 2})
