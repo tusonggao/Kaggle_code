@@ -572,6 +572,76 @@ def check_different_device_ip_city():
     trade_sub_df.to_csv(outputdir + 'different_device_ip_city_with_result.csv')
     
 #------------------------------------------------------------------------------------#
+#截止到本次交易前该id最近一天内的总交易次数，总登录次数，总交易次数/(总登录次数+1)比值
+#截止到本次交易前该id最近三天内的总交易次数，总登录次数，总交易次数/(总登录次数+1)比值
+#截止到本次交易前该id最近七天内的总交易次数，总登录次数，总交易次数/(总登录次数+1)比值
+#截止到本次交易前该id最近30天内的总交易次数，总登录次数，总交易次数/(总登录次数+1)比值
+#截止到本次交易前该id（2015.1.1到今天）总交易次数，总登录次数，总交易次数/(总登录次数+1)比值
+def get_till_now_login_trade_num():
+    global trade_df, merged_login_df, outputdir
+    trade_df_new = trade_df.copy()
+    trade_df_new = trade_df_new.sort_values(by='time')  # trade_df_new = trade_df_new.iloc[:100]
+    trade_num_list_1day, login_num_list_1day = [], []
+    trade_num_list_3day, login_num_list_3day = [], []
+    trade_num_list_7day, login_num_list_7day = [], []
+    trade_num_list_30day, login_num_list_30day = [], []
+    trade_num_list_history, login_num_list_history = [], []
+    count = 0
+    print('starting computing')
+    start_t = time.time()
+    for index, row in trade_df_new.iterrows():
+        print('get_from_last_login_trade_num compute ', count)
+        count += 1
+        trade_time, user_id = row['time'], row['id']
+        trade_sub_df = trade_df_new[trade_df_new.id==user_id]
+        login_sub_df = merged_login_df[merged_login_df.id==user_id]
+        day_num_list = [1, 3, 7, 30, 1000]
+        login_num_lists = [login_num_list_1day, login_num_list_3day,
+                           login_num_list_7day, login_num_list_30day,
+                           login_num_list_history]
+        trade_num_lists = [trade_num_list_1day, trade_num_list_3day,
+                           trade_num_list_7day, trade_num_list_30day,
+                           trade_num_list_history]
+        for num, login_l, trade_l in zip(day_num_list, login_num_lists, trade_num_lists):
+            login_n, trade_n = handle_num_day(num, trade_time, login_sub_df, trade_sub_df)
+            login_l.append(login_n)
+            trade_l.append(trade_n)
+    end_t = time.time()
+    print('cost time is ', end_t-start_t)
+    
+    trade_df_new['till_now_1day_login_num'] = np.array(login_num_list_1day)
+    trade_df_new['till_now_1day_trade_num'] = np.array(trade_num_list_1day)
+    trade_df_new['till_now_1day_trade_login_ratio'] = trade_df_new['till_now_1day_trade_num']/(trade_df_new['till_now_1day_login_num'] + 1)
+    
+    trade_df_new['till_now_3day_login_num'] = np.array(login_num_list_3day)
+    trade_df_new['till_now_3day_trade_num'] = np.array(trade_num_list_3day)
+    trade_df_new['till_now_3day_trade_login_ratio'] = trade_df_new['till_now_3day_trade_num']/(trade_df_new['till_now_3day_login_num'] + 1)
+    
+    trade_df_new['till_now_7day_login_num'] = np.array(login_num_list_7day)
+    trade_df_new['till_now_7day_trade_num'] = np.array(trade_num_list_7day)
+    trade_df_new['till_now_7day_trade_login_ratio'] = trade_df_new['till_now_7day_trade_num']/(trade_df_new['till_now_7day_login_num'] + 1)
+    
+    trade_df_new['till_now_30day_login_num'] = np.array(login_num_list_30day)
+    trade_df_new['till_now_30day_trade_num'] = np.array(trade_num_list_30day)
+    trade_df_new['till_now_30day_trade_login_ratio'] = trade_df_new['till_now_30day_trade_num']/(trade_df_new['till_now_30day_login_num'] + 1)
+    
+    trade_df_new['till_now_history_login_num'] = np.array(login_num_list_history)
+    trade_df_new['till_now_history_trade_num'] = np.array(trade_num_list_history)
+    trade_df_new['till_now_history_trade_login_ratio'] = trade_df_new['till_now_history_trade_num']/(trade_df_new['till_now_history_login_num'] + 1)
+    
+    trade_df_new.to_csv(outputdir + 'till_now_login_trade_num(.csv')
+
+def handle_num_day(day_num, trade_time, login_sub_df, trade_sub_df):
+    early_t = trade_time - np.timedelta64(day_num, 'D')
+    earlier_than_login = login_sub_df.time <= trade_time
+    later_than_login = login_sub_df.time > early_t
+    earlier_than_trade = trade_sub_df.time <= trade_time
+    later_than_trade = trade_sub_df.time > early_t
+    return (len(login_sub_df[earlier_than_login & later_than_login]),
+            len(trade_sub_df[earlier_than_trade & later_than_trade]))
+    
+    
+#------------------------------------------------------------------------------------#
 #得到该id截止本次交易所登陆过的不同的device、ip、city数
 def get_till_now_device_ip_city_sum_num():
     global trade_df, merged_login_df, outputdir
@@ -640,6 +710,10 @@ def get_device_ip_city_sum_num():
     
     
 if __name__=='__main__':
+    a = np.timedelta64(1, 'Y')
+    b_t = np.datetime64('2011-06-15 12:23:00') - np.timedelta64(12, 'D')
+    print('b_t is ', b_t)
+    
 #    print(sys.version)
 #    sss = pd.Series({'a': 3, 'b': 8, 'c': 5, 'd': 2})
 #    sss.plot(kind='bar')
@@ -652,7 +726,7 @@ if __name__=='__main__':
 #    df_merged = pd.melt(df1)
 #    df_merged = pd.concat([df1, df2]).reset_index()
 #    print(df_merged)
-#    sys.exit(0)
+    sys.exit(0)
     
 #    trade_df = pd.read_csv('./data/Risk_Detection_Qualification/t_trade.csv', 
 #                           index_col='rowkey', dtype={'id': np.str})
