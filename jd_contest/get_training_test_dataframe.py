@@ -67,11 +67,14 @@ def add_features(data_df, features_dir):
     data_df[['same_month_login_num', 'same_month_trade_num', 'same_month_trade_login_ratio']] = df[['same_month_login_num', 'same_month_trade_num', 'same_month_trade_login_ratio']]
     data_df[['total_login_num', 'total_trade_num', 'total_trade_login_ratio']] = df[['total_login_num', 'total_trade_num', 'total_trade_login_ratio']]
 
+    df = pd.read_csv(features_dir + 'cy_device_ip_city_sum_num.csv', index_col='rowkey')
+    data_df[['cy_device_sum_num', 'cy_ip_sum_num', 'cy_city_sum_num']] = df[['cy_device_sum_num', 'cy_ip_sum_num', 'cy_city_sum_num']]
 
-
-
-
-
+    df = pd.read_csv(features_dir + 'cy_whether_today_last_trade.csv', index_col='rowkey')
+    data_df[['cy_whether_today_last_trade']] = df[['cy_whether_today_last_trade']]
+    
+    df = pd.read_csv(features_dir + 'cy_scan_login_num.csv', index_col='rowkey')
+    data_df[['cy_scan_login_num']] = df[['cy_scan_login_num']]
 
     return data_df
 

@@ -883,6 +883,34 @@ def get_cy_whether_today_last_trade():
     print('cost time is ', end_t-start_t)
 
     
+#-------------------------------------------------------------------------------------#
+#穿越特征：该id通过扫码登录的次数
+def get_cy_scan_login_num():
+    print('in get_cy_scan_login_num')
+    global trade_df, merged_login_df, outputdir
+    trade_df_new = trade_df.copy()
+    trade_df_new = trade_df_new.sort_values(by='time')
+    trade_df_new = trade_df_new.iloc[:100]
+    scan_num_list = []
+    count = 0
+    print('starting computing')
+    start_t = time.time()
+    for index, row in trade_df_new.iterrows():
+        print('get_cy_scan_login_num compute ', count)
+        count += 1
+        user_id = row['id']
+        login_sub_df = merged_login_df[merged_login_df.id==user_id]
+        if login_sub_df.shape[0]>=1:
+            scan_num = login_sub_df['is_scan'].values.sum()
+        else:
+            scan_num = 0
+        scan_num_list.append(scan_num)
+    trade_df_new['cy_scan_login_num'] = np.array(scan_num_list)
+    trade_df_new.to_csv(outputdir + 'cy_scan_login_num.csv')
+    end_t = time.time()
+    print('cost time is ', end_t-start_t)
+
+    
 if __name__=='__main__':
 #    ddtt = np.datetime64('2015-02-28') + np.timedelta64(1, 'D')
 #    ddtt = np.datetime64('2015-02-28 00:00:00') + np.timedelta64(1, 'D')
@@ -940,6 +968,7 @@ if __name__=='__main__':
 #    get_cy_device_ip_city_sum_num()
 #    get_cy_login_trade_num()
 #    get_cy_whether_today_last_trade()
+    get_cy_scan_login_num()
     
 #    remove_duplicate_login_records(merged_login_df)
 #    get_sameday_sameid_different_trade_risk(trade_df)
@@ -977,13 +1006,14 @@ if __name__=='__main__':
 #    get_from_last_login_trade_num()
 #    get_whether_between_1_and_7_am()
 
-    get_till_now_login_trade_num()
-    get_till_now_device_ip_city_sum_num()
-    get_till_now_has_scaned_login()
-    
-    get_cy_device_ip_city_sum_num()
-    get_cy_login_trade_num()
-    get_cy_whether_today_last_trade()
+#    get_till_now_login_trade_num()
+#    get_till_now_device_ip_city_sum_num()
+#    get_till_now_has_scaned_login()
+#    
+#    get_cy_device_ip_city_sum_num()
+#    get_cy_login_trade_num()
+#    get_cy_whether_today_last_trade()    
+    get_cy_scan_login_num()
     
     end_t = time.time()
     print('total running cost time: ', end_t-start_t)
