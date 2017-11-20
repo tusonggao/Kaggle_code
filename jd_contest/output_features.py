@@ -890,7 +890,7 @@ def get_cy_scan_login_num():
     global trade_df, merged_login_df, outputdir
     trade_df_new = trade_df.copy()
     trade_df_new = trade_df_new.sort_values(by='time')
-    trade_df_new = trade_df_new.iloc[:100]
+#    trade_df_new = trade_df_new.iloc[:100]
     scan_num_list = []
     count = 0
     print('starting computing')

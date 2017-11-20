@@ -63,8 +63,8 @@ def store_feature_importances(model, feature_names, name_affix=None):
 def jd_score(y_true, y_predicted, beta=0.1):
     precision = metrics.precision_score(y_true, y_predicted)
     recall = metrics.recall_score(y_true, y_predicted)
-    accuracy = metrics.accuracy_score(y_true, y_predicted)
-    print('precision, recall, accuracy is ', precision, recall, accuracy)
+#    accuracy = metrics.accuracy_score(y_true, y_predicted)
+#    print('precision, recall, accuracy is ', precision, recall, accuracy)
     score = (1 + beta**2)*(precision*recall)/(beta**2*precision + recall)
     return score
     
@@ -72,6 +72,10 @@ def jd_score111(precision, recall, beta=0.1):
     score = (1 + beta**2)*(precision*recall)/(beta**2*precision + recall)
     return score
 
+def eval_metric_func(y_predicted, y_true):
+    score = jd_score(y_true, y_predicted)
+    return 'jd_score_tsg', score
+    
 #def get_AB_test_score(y_test, y_predicted):
 #    index_arr = np.random.shuffle(np.arange(0, len(y_test)))
 #    index_A, index_B = np.split(index_arr, 2)
@@ -130,12 +134,20 @@ def inblance_preprocessing(data_df, label_df):
     return all_instances.iloc[:, :-1], all_instances.iloc[:, -1]
 
 def training_with_xgboost(max_depth, learning_rate, n_estimators=600,
-                          subsample=1.0):
+                          subsample=1.0, negative_weight_ratio=1.0):
     start_t = time.time()
     print('in training_with_gbdt, max_depth={}, learning_rate={} '
           'n_estimators={} subsample={}'.format(
           max_depth, learning_rate, n_estimators, subsample))
     global X_train, y_train, X_test, y_test, real_test_df
+    
+    positive_instances = y_train[y_train==1]
+    negative_instances = y_train[y_train==0]
+    negative_weight = (negative_weight_ratio*len(positive_instances)/
+                       len(negative_instances))
+    print('negative_weight is ', negative_weight)
+    sample_weight = np.where(y_train==1, 1, negative_weight)
+    
     xgbc = XGBClassifier(
         silent=0 ,#设置成1则没有运行信息输出，最好是设置为0.是否在运行升级时打印消息。
         #nthread=4,# cpu 线程数 默认最大
@@ -159,7 +171,9 @@ def training_with_xgboost(max_depth, learning_rate, n_estimators=600,
         #eval_metric= 'auc'
     )
     
-    xgbc.fit(X_train, y_train, eval_metric='auc')
+#    xgbc.fit(X_train, y_train, eval_metric='auc')
+    xgbc.fit(X_train, y_train, sample_weight=sample_weight, 
+             eval_metric=eval_metric_func)
     
     print("xgb accuracy on training set:", xgbc.score(X_train, y_train))
     outcome = xgbc.predict(X_test)
@@ -296,7 +310,8 @@ if __name__=='__main__':
 #    training_with_rf(sample_weight=weight_arr)
 
     max_depth_list = [13]
-    learning_rate_list = [0.07, 0.09, 0.11, 0.13]
+#    learning_rate_list = [0.07, 0.09, 0.11, 0.13]
+    learning_rate_list = [0.09]
 
 #    max_depth_list = [7, 9, 11, 13]
 #    learning_rate_list = [0.01, 0.03, 0.05, 0.07, 0.09, 0.11, 0.13]
@@ -304,11 +319,9 @@ if __name__=='__main__':
 
     for depth in max_depth_list:
         for rate in learning_rate_list:
-            if depth==13 and rate==0.09:
-                continue
 #            training_with_gbdt(depth, rate, n_estimators=2000,
 #                               subsample=0.9, negative_weight_ratio=1.0)            
-            training_with_xgboost(depth, rate, n_estimators=2000, 
+            training_with_xgboost(depth, rate, n_estimators=1200, 
                                   subsample=0.9)
 
 #    gbdt.fit(X_train, y_train)
