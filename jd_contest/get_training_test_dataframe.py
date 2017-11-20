@@ -46,6 +46,33 @@ def add_features(data_df, features_dir):
     df = pd.read_csv(features_dir + 'whether_between_1_and_7_am.csv', index_col='rowkey')
     data_df['between_1_and_7_am'] = df['between_1_and_7_am']
 
+    df = pd.read_csv(features_dir + 'till_now_login_trade_num.csv', index_col='rowkey')
+    data_df[['till_now_1day_login_num', 'till_now_1day_trade_num', 'till_now_1day_trade_login_ratio']] = df[['till_now_1day_login_num', 'till_now_1day_trade_num', 'till_now_1day_trade_login_ratio']]
+    data_df[['till_now_3day_login_num', 'till_now_3day_trade_num', 'till_now_3day_trade_login_ratio']] = df[['till_now_3day_login_num', 'till_now_3day_trade_num', 'till_now_3day_trade_login_ratio']]
+    data_df[['till_now_7day_login_num', 'till_now_7day_trade_num', 'till_now_7day_trade_login_ratio']] = df[['till_now_7day_login_num', 'till_now_7day_trade_num', 'till_now_7day_trade_login_ratio']]    
+    data_df[['till_now_30day_login_num', 'till_now_30day_trade_num', 'till_now_30day_trade_login_ratio']] = df[['till_now_30day_login_num', 'till_now_30day_trade_num', 'till_now_30day_trade_login_ratio']]    
+    data_df[['till_now_history_login_num', 'till_now_history_trade_num', 'till_now_history_trade_login_ratio']] = df[['till_now_history_login_num', 'till_now_history_trade_num', 'till_now_history_trade_login_ratio']]    
+
+    df = pd.read_csv(features_dir + 'till_now_device_ip_city_sum_num.csv', index_col='rowkey')
+    data_df[['till_now_login_device_num', 'till_now_login_ip_num', 'till_now_login_city_num']] = df[['till_now_login_device_num', 'till_now_login_ip_num', 'till_now_login_city_num']]
+
+    df = pd.read_csv(features_dir + 'till_now_has_scaned_login.csv', index_col='rowkey')
+    data_df[['till_now_has_scaned_login']] = df[['till_now_has_scaned_login']]
+
+    df = pd.read_csv(features_dir + 'cy_login_trade_num.csv', index_col='rowkey')
+    data_df[['future_1day_login_num', 'future_1day_trade_num', 'future_1day_trade_login_ratio']] = df[['future_1day_login_num', 'future_1day_trade_num', 'future_1day_trade_login_ratio']]
+    data_df[['future_3day_login_num', 'future_3day_trade_num', 'future_3day_trade_login_ratio']] = df[['future_3day_login_num', 'future_3day_trade_num', 'future_3day_trade_login_ratio']]
+    data_df[['future_7day_login_num', 'future_7day_trade_num', 'future_7day_trade_login_ratio']] = df[['future_7day_login_num', 'future_7day_trade_num', 'future_7day_trade_login_ratio']]
+    data_df[['same_day_login_num', 'same_day_trade_num', 'same_day_trade_login_ratio']] = df[['same_day_login_num', 'same_day_trade_num', 'same_day_trade_login_ratio']]
+    data_df[['same_month_login_num', 'same_month_trade_num', 'same_month_trade_login_ratio']] = df[['same_month_login_num', 'same_month_trade_num', 'same_month_trade_login_ratio']]
+    data_df[['total_login_num', 'total_trade_num', 'total_trade_login_ratio']] = df[['total_login_num', 'total_trade_num', 'total_trade_login_ratio']]
+
+
+
+
+
+
+
     return data_df
 
 def generate_training_dataframe():
