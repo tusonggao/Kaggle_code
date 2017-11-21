@@ -146,7 +146,8 @@ def training_with_xgboost(max_depth, learning_rate, n_estimators=600,
     negative_weight = (negative_weight_ratio*len(positive_instances)/
                        len(negative_instances))
     print('negative_weight is ', negative_weight)
-    sample_weight = np.where(y_train==1, 1, negative_weight)
+#    sample_weight = np.where(y_train==1, 1, negative_weight)
+    sample_weight = np.where(y_train==1, 1, 1)
     
     xgbc = XGBClassifier(
         silent=0 ,#设置成1则没有运行信息输出，最好是设置为0.是否在运行升级时打印消息。
@@ -171,15 +172,23 @@ def training_with_xgboost(max_depth, learning_rate, n_estimators=600,
         #eval_metric= 'auc'
     )
     
+#    X_train = X_train.append(X_test)
+#    y_train = y_train.append(y_test)
+#    print('X_train y_train shape is ', X_train.shape, y_train.shape)
+    
 #    xgbc.fit(X_train, y_train, eval_metric='auc')
-    xgbc.fit(X_train, y_train, sample_weight=sample_weight, 
-             eval_metric=eval_metric_func)
+    xgbc.fit(X_train, y_train, eval_metric=eval_metric_func)
     
     print("xgb accuracy on training set:", xgbc.score(X_train, y_train))
     outcome = xgbc.predict(X_test)
-    score, score_a, score_b = get_AB_test_score(y_test, outcome)
+    score, score_a, score_b = get_AB_test_score(y_test.copy(), outcome)
+    X_test_predicted = X_test.copy()
+    X_test_predicted['predicted_is_risk'] = outcome
+    X_test_predicted['real_is_risk'] = y_test
+    
 #    score = jd_score(y_test, outcome)
     print('in validation test get score ', score)
+    
     
     time_str = time.strftime('%Y-%m-%d_%H_%M_%S', time.localtime())
     name_affix = ('xgb_' + time_str + '_' + str(round(score, 5)) + 
@@ -188,6 +197,7 @@ def training_with_xgboost(max_depth, learning_rate, n_estimators=600,
                   '_n_estimators_' + str(n_estimators) + 
                   '_subsample_' + str(subsample))
     store_feature_importances(xgbc, list(X_train.columns), name_affix)
+    X_test_predicted.to_csv('./data/submission/tested_outcomes_' + name_affix + '.csv')
     with open('./model_dumps/xgb_' + name_affix + '.pkl', 'wb') as f:
         pickle.dump(xgbc, f)
     real_predicted_outcome = xgbc.predict(real_test_df)
@@ -306,15 +316,16 @@ if __name__=='__main__':
     
 #    X_train, y_train = inblance_preprocessing(X_train, y_train)
 #    print('222 X_train y_train', X_train.shape, y_train.shape)
+    y_test.to_csv('./data/submission/real_test_df.csv')
     
 #    training_with_rf(sample_weight=weight_arr)
 
-    max_depth_list = [13]
+#    max_depth_list = [13]
 #    learning_rate_list = [0.07, 0.09, 0.11, 0.13]
-    learning_rate_list = [0.09]
+#    learning_rate_list = [0.09]
 
-#    max_depth_list = [7, 9, 11, 13]
-#    learning_rate_list = [0.01, 0.03, 0.05, 0.07, 0.09, 0.11, 0.13]
+    max_depth_list = [5, 7, 9, 11, 13]
+    learning_rate_list = [0.09, 0.11, 0.13, 0.15]
 #    max_depth_list = [7]
 
     for depth in max_depth_list:
