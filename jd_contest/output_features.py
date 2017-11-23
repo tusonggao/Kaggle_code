@@ -943,7 +943,7 @@ def get_cy_id_has_occured_risk_trade():
     end_t = time.time()
     print('cost time is ', end_t-start_t)
     
-    trade_df_new[['is_risk', 'id', 'cy_id_has_occured_risk_trade']].to_csv(outputdir + 'cy_id_has_occured_risk_trade.csv')
+    trade_df_new[['id', 'cy_id_has_occured_risk_trade']].to_csv(outputdir + 'cy_id_has_occured_risk_trade.csv')
 
 #    trade_df_new.to_csv(outputdir + 'till_now_has_scaned_login.csv')
 #trade_df_new = pd.merge(trade_df_new, dd_ff, on='id')
@@ -1011,7 +1011,7 @@ if __name__=='__main__':
 #    get_cy_login_trade_num()
 #    get_cy_whether_today_last_trade()
 #    get_cy_scan_login_num()
-    get_cy_id_has_occured_risk_trade()
+#    get_cy_id_has_occured_risk_trade()
     
 #    remove_duplicate_login_records(merged_login_df)
 #    get_sameday_sameid_different_trade_risk(trade_df)

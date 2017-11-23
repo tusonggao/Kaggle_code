@@ -82,6 +82,9 @@ def add_features(data_df, features_dir):
     df = pd.read_csv(features_dir + 'cy_scan_login_num.csv', index_col='rowkey')
     data_df[['cy_scan_login_num']] = df[['cy_scan_login_num']]
 
+    df = pd.read_csv(features_dir + 'cy_id_has_occured_risk_trade.csv', index_col='rowkey')
+    data_df[['cy_id_has_occured_risk_trade']] = df[['cy_id_has_occured_risk_trade']]
+
     return data_df
 
 def generate_training_dataframe():
