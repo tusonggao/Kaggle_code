@@ -1,6 +1,7 @@
 import numpy as np
 np.random.seed(2017)
 
+import sys
 import time
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -32,6 +33,11 @@ def add_features(data_df, features_dir):
     data_df[['time_long1', 'time_long2', 'time_long3']] = df[['time_long1', 'time_long2', 'time_long3']]
     data_df[['log_from1', 'log_from2', 'log_from3']] = df[['log_from1', 'log_from2', 'log_from3']]
     data_df[['result1', 'result2', 'result3']] = df[['result1', 'result2', 'result3']]
+    condition1 = data_df['result1'].values==1
+    condition2 = np.isnan(data_df['result1'].values)
+    data_df['result_outcome'] = np.where(condition1, 1, np.where(condition2, 0, -1))
+    
+
     data_df[['is_scan1', 'is_scan2', 'is_scan3']] = df[['is_scan1', 'is_scan2', 'is_scan3']]
 
     df = pd.read_csv(features_dir + 'before_trade_trade_login_num.csv', index_col='rowkey')
@@ -100,10 +106,17 @@ def expand_df(merged_df):
                        'time_long2', 'time_long3']
     for col in fill_na_columns:
         merged_df[col].fillna(merged_df[col].mean(), inplace=True)
+    
+    
 
     merged_df[['log_from1', 'log_from2', 'log_from3']] =merged_df[['log_from1', 'log_from2', 'log_from3']].astype('str')
     merged_df[['result1', 'result2', 'result3']] =merged_df[['result1', 'result2', 'result3']].astype('str')
     merged_df[['is_scan1', 'is_scan2', 'is_scan3']] =merged_df[['is_scan1', 'is_scan2', 'is_scan3']].astype('str')
+    
+    #去掉没用的feature
+#    merged_df.drop(['result1', 'result2', 'result3'], axis=1, inplace=True)
+#    merged_df.drop(['log_from1', 'log_from2', 'log_from3'], axis=1, inplace=True)
+#    merged_df.drop(['is_scan1', 'is_scan2', 'is_scan3'], axis=1, inplace=True)
     
 #    merged_df.drop('time', axis=1, inplace=True)
     merged_df = pd.get_dummies(merged_df)
@@ -112,6 +125,21 @@ def expand_df(merged_df):
     
     
 if __name__=='__main__':
+#    data_df = pd.DataFrame({'result1': [4, 1, -1, np.nan, 1, 1, 5, 1, np.nan],
+#                            'B': [-4,-1, 1, np.nan, 1, 1, 9, 1, np.nan]})
+#    
+#    condition1 = data_df['result1'].values==1
+#    condition2 = np.isnan(data_df['result1'].values)
+#    print('condition1 is ', condition1)
+#    print('condition2 is ', condition2)
+#    print(data_df)
+#    data_df['result_outcome'] = np.where(condition1, 1, np.where(condition2, -1, 0))
+#    print(data_df)
+#    data_df.drop(['result1', 'B'], axis=1, inplace=True)
+#    print(data_df)
+#
+#    sys.exit(0)
+    
     start_t = time.time()
     
     dateparse = lambda x: pd.datetime.strptime(x, '%Y-%m-%d %H:%M:%S')

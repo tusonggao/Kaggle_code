@@ -710,6 +710,8 @@ def get_till_now_has_scaned_login():
     end_t = time.time()
     print('cost time is ', end_t-start_t)
     trade_df_new.to_csv(outputdir + 'till_now_has_scaned_login.csv')
+
+
     
     
 
@@ -910,7 +912,69 @@ def get_cy_scan_login_num():
     end_t = time.time()
     print('cost time is ', end_t-start_t)
 
+#------------------------------------------------------------------------------------#
+#该id是否出现过risk交易
+def get_cy_id_has_occured_risk_trade():
+#    def lambda_func(row, df):
+#        if row['id'] in df.index:
+#            return df[row['id']]
+#        else:
+#            return 0
+
+    global trade_df, merged_login_df, outputdir
+    train_trade_df = pd.read_csv('./data/Risk_Detection_Qualification/t_trade.csv', 
+                                 index_col='rowkey', parse_dates=['time'],
+                                 date_parser=dateparse)
+    start_t = time.time()
+    trade_df_new = trade_df.copy()
+    trade_df_new = trade_df_new.sort_values(by='time').reset_index()
     
+    dd_ff = train_trade_df[['is_risk', 'id']].groupby('id').sum().reset_index()
+    dd_ff['is_risk_id'] = np.where(dd_ff['is_risk'].values>0, 1, 0)
+    dd_ff.drop('is_risk', axis=1, inplace=True)
+#    trade_df_new['is_risk_id'] = 0
+#    trade_df_new['is_risk_id']
+#    trade_df_new['is_risk_id'] = dd_ff[train_trade_df.id]
+    
+#    trade_df_new['is_risk_id'] = trade_df_new['id'].apply(lambda row: lambda_func(row, dd_ff), axis=1)
+    trade_df_new = pd.merge(trade_df_new, dd_ff, on='id')
+    trade_df_new.set_index('rowkey')
+    trade_df_new[['is_risk', 'id', 'is_risk_id']].to_csv(outputdir + 'cy_id_has_occured_risk_trade.csv')
+    
+
+#groupby(['id', 'device']).size()
+    
+    
+#    trade_df_new = trade_df_new.iloc[:1000]
+    check_list = []
+#    count = 0
+#    print('starting computing')
+#    start_t = time.time()
+    for index, row in trade_df_new.iterrows():
+        print('get_till_now_has_scaned_login compute ', count)
+        count += 1
+        trade_time = row['time']
+        user_id = row['id']
+        login_sub_df = merged_login_df[merged_login_df.id==user_id].sort_values(by='time')
+        login_sub_df = login_sub_df[login_sub_df.time<=trade_time]
+        if user_id in dd_ff.index.tolist():
+            check_list.append(dd_ff.ix[user_id, 'is_risk_id'])
+        else:
+            check_list.append(0)
+        if login_sub_df.shape[0]>=1:
+            sum_num = login_sub_df['is_scan'].values.sum()
+        else:
+            sum_num = 0
+        check_list.append(1 if sum_num>0 else 0)
+#
+#    trade_df_new['till_now_has_scaned_login'] = np.array(check_list)
+#    
+    end_t = time.time()
+    print('cost time is ', end_t-start_t)
+#    dd_ff.to_csv(outputdir + 'cy_id_has_occured_risk_trade.csv')
+
+#    trade_df_new.to_csv(outputdir + 'till_now_has_scaned_login.csv')
+
 if __name__=='__main__':
 #    ddtt = np.datetime64('2015-02-28') + np.timedelta64(1, 'D')
 #    ddtt = np.datetime64('2015-02-28 00:00:00') + np.timedelta64(1, 'D')
@@ -920,15 +984,19 @@ if __name__=='__main__':
 #    sss = pd.Series({'a': 3, 'b': 8, 'c': 5, 'd': 2})
 #    sss.plot(kind='bar')
     
-#    df1 = pd.DataFrame({'name': ['a', 'a', 'a', 'c', 'd', 'b', 'd'],
-#                     'value':[12, 23, 33, 44, 55, 66, 77],
-#                     'ttt':[111, 222, 333, 444, 555, 666, 777]})
-#    df2 = pd.DataFrame({'name': ['d', 'b', 'a', 'c', 'd', 'a', 'c'],
-#                     'value':[121, 231, 331, 441, 551, 661, 771]})
+    df1 = pd.DataFrame({'id': ['a', 'a', 'e', 'c', 'd', 'b', 'd'],
+                        'value':[12, 23, 33, 44, 55, 66, 77],
+                        'ttt':[111, 222, 333, 444, 555, 666, 777]})
+    df2 = pd.DataFrame({'id': ['a', 'b', 'c', 'd'],
+                        'is_risk_id':[33, 231, 331, 441]})
+#    df1 = df1.merge(df1, df2, on='id', how='outer')
+    df1 = df1.merge(df1, df2, on='id', how='right')
+    df1['is_risk_id'] = np.where(df1['id'].values.isin(df2.id.values), df2)
+    print(df1, df2)
 #    df_merged = pd.melt(df1)
 #    df_merged = pd.concat([df1, df2]).reset_index()
 #    print(df_merged)
-#    sys.exit(0)
+    sys.exit(0)
     
 #    trade_df = pd.read_csv('./data/Risk_Detection_Qualification/t_trade.csv', 
 #                           index_col='rowkey', dtype={'id': np.str})
@@ -968,7 +1036,8 @@ if __name__=='__main__':
 #    get_cy_device_ip_city_sum_num()
 #    get_cy_login_trade_num()
 #    get_cy_whether_today_last_trade()
-    get_cy_scan_login_num()
+#    get_cy_scan_login_num()
+    get_cy_id_has_occured_risk_trade()
     
 #    remove_duplicate_login_records(merged_login_df)
 #    get_sameday_sameid_different_trade_risk(trade_df)
@@ -1013,7 +1082,7 @@ if __name__=='__main__':
 #    get_cy_device_ip_city_sum_num()
 #    get_cy_login_trade_num()
 #    get_cy_whether_today_last_trade()    
-    get_cy_scan_login_num()
+#    get_cy_scan_login_num()
     
     end_t = time.time()
     print('total running cost time: ', end_t-start_t)

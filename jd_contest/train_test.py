@@ -1,5 +1,5 @@
 import numpy as np
-#np.random.seed(2017)
+np.random.seed(2017)
 
 import sys
 import time
@@ -133,6 +133,15 @@ def inblance_preprocessing(data_df, label_df):
     all_instances = skl_shuffle(all_instances)
     return all_instances.iloc[:, :-1], all_instances.iloc[:, -1]
 
+def generate_output_compare_test(y_test_predicted, name_affix):
+    global y_test, X_test_bakup
+    X_test_predicted = X_test_bakup.copy()
+    X_test_predicted['predicted_is_risk'] = y_test_predicted
+    X_test_predicted['real_is_risk'] = y_test
+    X_test_predicted[['id', 'predicted_is_risk', 'real_is_risk']].to_csv(
+        './data/submission/tested_outcomes_' + name_affix + '.csv')
+    pass
+
 def training_with_xgboost(max_depth, learning_rate, n_estimators=600,
                           subsample=1.0, negative_weight_ratio=1.0):
     start_t = time.time()
@@ -182,13 +191,7 @@ def training_with_xgboost(max_depth, learning_rate, n_estimators=600,
     print("xgb accuracy on training set:", xgbc.score(X_train, y_train))
     outcome = xgbc.predict(X_test)
     score, score_a, score_b = get_AB_test_score(y_test.copy(), outcome)
-    X_test_predicted = X_test.copy()
-    X_test_predicted['predicted_is_risk'] = outcome
-    X_test_predicted['real_is_risk'] = y_test
-    
-#    score = jd_score(y_test, outcome)
     print('in validation test get score ', score)
-    
     
     time_str = time.strftime('%Y-%m-%d_%H_%M_%S', time.localtime())
     name_affix = ('xgb_' + time_str + '_' + str(round(score, 5)) + 
@@ -197,7 +200,9 @@ def training_with_xgboost(max_depth, learning_rate, n_estimators=600,
                   '_n_estimators_' + str(n_estimators) + 
                   '_subsample_' + str(subsample))
     store_feature_importances(xgbc, list(X_train.columns), name_affix)
-    X_test_predicted.to_csv('./data/submission/tested_outcomes_' + name_affix + '.csv')
+    generate_output_compare_test(outcome, name_affix)
+#    score = jd_score(y_test, outcome)
+    
     with open('./model_dumps/xgb_' + name_affix + '.pkl', 'wb') as f:
         pickle.dump(xgbc, f)
     real_predicted_outcome = xgbc.predict(real_test_df)
@@ -308,6 +313,8 @@ if __name__=='__main__':
                            parse_dates=['time'], date_parser=dateparse)
     X_train, X_test, y_train, y_test = train_test_split_new(
                          train_df.iloc[:, :-1], train_df.iloc[:, -1])
+    y_test_bakup = y_test.copy()
+    X_test_bakup = X_test.copy()
     
     real_test_df = pd.read_csv('./data/test_data.csv', index_col='rowkey',
                                parse_dates=['time'], date_parser=dateparse)
@@ -316,7 +323,7 @@ if __name__=='__main__':
     
 #    X_train, y_train = inblance_preprocessing(X_train, y_train)
 #    print('222 X_train y_train', X_train.shape, y_train.shape)
-    y_test.to_csv('./data/submission/real_test_df.csv')
+#    y_test.to_csv('./data/submission/real_test_df.csv')
     
 #    training_with_rf(sample_weight=weight_arr)
 
@@ -324,9 +331,10 @@ if __name__=='__main__':
 #    learning_rate_list = [0.07, 0.09, 0.11, 0.13]
 #    learning_rate_list = [0.09]
 
-    max_depth_list = [5, 7, 9, 11, 13]
-    learning_rate_list = [0.09, 0.11, 0.13, 0.15]
-#    max_depth_list = [7]
+#    max_depth_list = [5, 7, 9, 11, 13]
+#    learning_rate_list = [0.09, 0.11, 0.13, 0.15]
+    max_depth_list = [13]
+    learning_rate_list = [0.09]
 
     for depth in max_depth_list:
         for rate in learning_rate_list:
