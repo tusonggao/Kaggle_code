@@ -82,8 +82,8 @@ def add_features(data_df, features_dir):
     df = pd.read_csv(features_dir + 'cy_scan_login_num.csv', index_col='rowkey')
     data_df[['cy_scan_login_num']] = df[['cy_scan_login_num']]
 
-    df = pd.read_csv(features_dir + 'cy_id_has_occured_risk_trade.csv', index_col='rowkey')
-    data_df[['cy_id_has_occured_risk_trade']] = df[['cy_id_has_occured_risk_trade']]
+#    df = pd.read_csv(features_dir + 'cy_id_has_occured_risk_trade.csv', index_col='rowkey') #加上之后效果很差
+#    data_df[['cy_id_has_occured_risk_trade']] = df[['cy_id_has_occured_risk_trade']]
 
     return data_df
 
@@ -108,8 +108,7 @@ def expand_df(merged_df):
                        'trade_login_elapse','time_long1', 
                        'time_long2', 'time_long3']
     for col in fill_na_columns:
-        merged_df[col].fillna(merged_df[col].mean(), inplace=True)
-    
+        merged_df[col].fillna(merged_df[col].mean(), inplace=True)    
     
 
     merged_df[['log_from1', 'log_from2', 'log_from3']] =merged_df[['log_from1', 'log_from2', 'log_from3']].astype('str')

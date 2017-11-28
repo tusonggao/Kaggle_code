@@ -10,6 +10,45 @@ from sklearn import metrics
 from sklearn.model_selection import train_test_split
 
 #------------------------------------------------------------------------------------#
+#检验是否有30分钟内出现登录错误，且正确登录次数少于2次的所有交易记录
+def check_30minutes_loginerror_loginsuccess_lessthan2():
+    global trade_df, merged_login_df, outputdir
+    trade_df_new = trade_df.copy()
+#    trade_df_new = trade_df_new.iloc[:100]
+    check_list = []
+    count = 0
+    print('starting computing')
+    start_t = time.time()
+    for index, row in trade_df_new.iterrows():
+        flag = False
+        print('check_30minutes_loginerror_loginsuccess_lessthan2 compute ', count)
+        count += 1
+        trade_time = row['time']
+        user_id = row['id']
+        login_sub_df = merged_login_df[merged_login_df.id==user_id].sort_values(by='time')
+        later_than = login_sub_df.time >= (trade_time - np.timedelta64(30, 'm'))
+        earlier_than = login_sub_df.time <= trade_time
+        login_sub_df = login_sub_df[later_than & earlier_than]
+        if len(login_sub_df['result'].unique())>1:
+            result_list = login_sub_df['result'].values.tolist()
+            result_list.reverse()
+            cnt = 0
+            for result in result_list:
+                if result!=1:
+                    break
+                cnt +=1
+            if cnt<=1:
+                flag = True
+                check_list.append(True)
+        if flag==False:
+            check_list.append(False)
+    end_t = time.time()
+    print('cost time is ', end_t-start_t)
+    interested_df = trade_df_new[np.array(check_list)]
+    interested_df.to_csv(outputdir + '30minutes_loginerror_loginsuccess_lessthan2.csv')
+
+
+#------------------------------------------------------------------------------------#
 #去除重复的登录记录 如果前后相差不到3分钟 device log_from ip city result id type is_scan都相同
 #则去掉后面这条记录
 def get_sameday_sameid_different_trade_risk(trade_df):
@@ -709,10 +748,7 @@ def get_till_now_has_scaned_login():
     
     end_t = time.time()
     print('cost time is ', end_t-start_t)
-    trade_df_new.to_csv(outputdir + 'till_now_has_scaned_login.csv')
-
-
-    
+    trade_df_new.to_csv(outputdir + 'till_now_has_scaned_login.csv')   
     
 
 
@@ -945,6 +981,44 @@ def get_cy_id_has_occured_risk_trade():
     
     trade_df_new[['id', 'cy_id_has_occured_risk_trade']].to_csv(outputdir + 'cy_id_has_occured_risk_trade.csv')
 
+
+#------------------------------------------------------------------------------------#
+#交易登录的device ip是否是安全、警告、危险的
+def get_cy_device_ip_risky_warned_safe():
+    global trade_df, merged_login_df, outputdir
+    train_trade_df = pd.read_csv('./data/Risk_Detection_Qualification/t_trade.csv', 
+                                 index_col='rowkey', parse_dates=['time'],
+                                 date_parser=dateparse)
+    start_t = time.time()
+    trade_df_new = trade_df.copy()
+#    trade_df_new = trade_df_new.iloc[:1000]
+    trade_df_new = trade_df_new.sort_values(by='time')
+    group_df = train_trade_df[['is_risk', 'id']].groupby('id').sum()
+    group_df['is_risk_id'] = np.where(group_df['is_risk'].values>0, 1, -1)
+    check_list = []
+    count = 0
+    print('starting computing')
+    for index, row in trade_df_new.iterrows():
+        print('get_cy_id_has_occured_risk_trade compute ', count)
+        count += 1
+        trade_time = row['time']
+        user_id = row['id']
+        login_sub_df = merged_login_df[merged_login_df.id==user_id].sort_values(by='time')
+        login_sub_df = login_sub_df[login_sub_df.time<=trade_time]
+        if user_id in group_df.index.tolist():
+            check_list.append(group_df.ix[user_id, 'is_risk_id'])
+        else:
+            check_list.append(0)
+    trade_df_new['cy_id_has_occured_risk_trade'] = np.array(check_list)
+    end_t = time.time()
+    print('cost time is ', end_t-start_t)
+    
+    trade_df_new[['id', 'cy_id_has_occured_risk_trade']].to_csv(outputdir + 'cy_id_has_occured_risk_trade.csv')
+    
+
+
+    
+
 #    trade_df_new.to_csv(outputdir + 'till_now_has_scaned_login.csv')
 #trade_df_new = pd.merge(trade_df_new, dd_ff, on='id')
 
@@ -957,16 +1031,16 @@ if __name__=='__main__':
 #    sss = pd.Series({'a': 3, 'b': 8, 'c': 5, 'd': 2})
 #    sss.plot(kind='bar')
     
-#    df1 = pd.DataFrame({'id': ['a', 'a', 'e', 'c', 'd', 'b', 'd'],
-#                        'value':[12, 23, 33, 44, 55, 66, 77],
-#                        'ttt':[111, 222, 333, 444, 555, 666, 777]})
+    df1 = pd.DataFrame({'id': ['a', 'a', 'e', 'c', 'd', 'b', 'd'],
+                        'value':[12, 23, 33, 44, 55, 66, 77],
+                        'ttt':[111, 222, 333, 444, 555, 666, 777]})
 #    df2 = pd.DataFrame({'id': ['a', 'b', 'c', 'd'],
 #                        'is_risk_id':[33, 231, 331, 441]})
 #    df1 = df1.merge(df1, df2, on='id', how='outer')
 #    df1 = df1.merge(df1, df2, on='id', how='right')
 #    df1['is_risk_id'] = np.where(df1['id'].values.isin(df2.id.values), df2)
 #    print(df1, df2)
-#    print(df1.ix[2, 'id'])
+    print(df1['id'].unique())
 #    df_merged = pd.melt(df1)
 #    df_merged = pd.concat([df1, df2]).reset_index()
 #    print(df_merged)
@@ -1001,6 +1075,7 @@ if __name__=='__main__':
     
 #    check_835072_device()
 #    check_different_device_ip_city()
+    check_30minutes_loginerror_loginsuccess_lessthan2()
 #    get_device_ip_city_sum_num()
 
 #    get_till_now_login_trade_num()
@@ -1057,7 +1132,7 @@ if __name__=='__main__':
 #    get_cy_login_trade_num()
 #    get_cy_whether_today_last_trade()    
 #    get_cy_scan_login_num()
-    get_cy_id_has_occured_risk_trade()
+#    get_cy_id_has_occured_risk_trade()
     
     end_t = time.time()
     print('total running cost time: ', end_t-start_t)

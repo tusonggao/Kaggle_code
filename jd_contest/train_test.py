@@ -291,12 +291,13 @@ def training_with_rf(n_estimators=4000, min_samples_leaf=3, sample_weight=None):
 
 def filter_out_features(dfs):
     filter_features = ['time', 'id', 'from_2015_1_1_minutes_num']
+#    filter_features = ['time', 'from_2015_1_1_minutes_num']
     if not isinstance(dfs, list):
         dfs = [dfs]
     for df in dfs:
         for feature in filter_features:
             df.drop(feature, axis=1, inplace=True)
-    
+            
 
 if __name__=='__main__':
 #    arr = np.array([12, 32, 33, 59, 67, 98, 102, 44, 55])
