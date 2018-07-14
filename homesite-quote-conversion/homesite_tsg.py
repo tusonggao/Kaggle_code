@@ -1,5 +1,4 @@
 import numpy as np
-np.random.seed(2017)
 
 import sys
 import time
@@ -19,8 +18,6 @@ from sklearn.utils import shuffle as skl_shuffle
 
 import xgboost as xgb
 from xgboost.sklearn import XGBClassifier
-
-
 
 def store_feature_importances(model, feature_names, name_affix=None):
     array = model.feature_importances_
