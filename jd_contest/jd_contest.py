@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 from sklearn import metrics
 from sklearn.model_selection import train_test_split
 
+#########################################################
+
 def jd_score(y_true, y_predicted, beta=0.1):
     precision = metrics.precision_score(y_true, y_predicted)
     recall = metrics.recall_score(y_true, y_predicted)
