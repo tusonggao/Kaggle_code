@@ -1,8 +1,3 @@
-# -*- coding:utf-8
-"""
-@Created on 2018/6/22 14:01
-@Author: Pengjiaxin
-"""
 import pandas as pd
 import math
 import numpy as np
