@@ -33,7 +33,6 @@ def mem_usage(pandas_obj):
     usage_mb = usage_b / 1024 ** 2 # convert bytes to megabytes
     return "{:03.2f} MB".format(usage_mb)
 
-
 def generate_user_tags_df(merged_df):
     start_t = time.time()
     print('into generate_user_tags_df')
@@ -174,7 +173,7 @@ gc.collect()
 #    'C:/D_Disk/data_competition/xunfei_ai_ctr/data/merged_df_dtypes.csv'
 #)
 
-#user_tags_df = generate_user_tags_df(merged_df)
+user_tags_df_sparse = generate_user_tags_df(merged_df)
 
 start_t = time.time()
 merged_df.drop(['advert_industry_inner', 'osv', 'make', 'user_tags', 
@@ -184,18 +183,14 @@ merged_df = pd.get_dummies(merged_df)
 print('merged_df.shape 222 is {} merge data cost time:{}'.format(
        merged_df.shape, time.time()-start_t))
 
-#start_t = time.time()
-#merged_df = merged_df.join(user_tags_df, how='left')
-#print('after join merged_df.shape: {} join cost time:{} mem_usage:{}',
-#      merged_df.shape, time.time()-start_t, mem_usage(merged_df))
-#del user_tags_df
-#gc.collect()
+start_t = time.time()
+merged_df = merged_df.join(user_tags_df_sparse, how='left')
+print('after join merged_df.shape: {} join cost time:{} mem_usage:{}',
+      merged_df.shape, time.time()-start_t, mem_usage(merged_df))
+del user_tags_df_sparse
+gc.collect()
 
 #merged_df.info(memory_usage='deep')
-
-#train_df = merged_df[merged_df['prediction_pay_price']!=-99999]
-#train_y = train_df['prediction_pay_price'].values
-#train_X = train_df.drop(['prediction_pay_price'], axis=1).values
 
 train_df = merged_df[pd.notna(merged_df['click'])]
 train_y = train_df['click']
@@ -206,7 +201,6 @@ gc.collect()
 test_df = merged_df[pd.isna(merged_df['click'])]
 test_X = test_df.drop(['click'], axis=1)
 
-#test_X = test_df.drop(['click'], axis=1).values
 outcome_df = pd.DataFrame()
 outcome_df['instance_id'] = test_df.index
 outcome_df.set_index('instance_id', inplace=True)
@@ -214,40 +208,15 @@ outcome_df.set_index('instance_id', inplace=True)
 del merged_df, test_df
 gc.collect()
 
-X_train_new, X_val_new, y_train_new, y_val_new = train_test_split(train_X, 
-            train_y, test_size=0.25, random_state=SEED)
-print('X_train_new.shape is {}, X_val_new.shape is {}, test_X.shape is {}'.format(
-      X_train_new.shape, X_val_new.shape, test_X.shape))
-
-#lgbm = lgb.LGBMRegressor(n_estimators=5000, n_jobs=-1, learning_rate=0.08, 
-#                          random_state=42, max_depth=13, min_child_samples=400,
-#                          num_leaves=700, subsample=0.7, colsample_bytree=0.85,
-#                          silent=-1, verbose=-1)
-
-
-#lgbm = lgb.LGBMRegressor(n_estimators=5000, n_jobs=-1, learning_rate=0.05, 
-#                          random_state=42, max_depth=7, min_child_samples=150,
-#                          num_leaves=3000, subsample=0.7, colsample_bytree=0.8,
-#                          silent=-1, verbose=-1)
-
-#lgbm = lgb.LGBMRegressor(n_estimators=6000, n_jobs=-1, learning_rate=0.08, 
-#                          random_state=42, max_depth=13, min_child_samples=800,
-#                          num_leaves=151, subsample=0.8, colsample_bytree=0.9,
-#                          boosting_type='dart', reg_alpha=0.1, reg_lambda=0.05,
-#                          silent=-1, verbose=-1)
-
-#lgbm.fit(X_train_new, y_train_new, eval_set=[(X_val_new, y_val_new)], 
-#         eval_metric=rmse, verbose=200, early_stopping_rounds=600)
-
-#lgbm.fit(train_X, train_y, eval_set=[(X_train_new, y_train_new), 
-#        (X_val_new, y_val_new)], eval_metric=rmse, 
-#        verbose=200, early_stopping_rounds=500)
-    
-#lgbm.fit(X_train_new, y_train_new)
-
 def test_param(lgbm_param):
     print('in test_param')
     gc.collect()
+    
+    print('start train_test_split')
+    X_train_new, X_val_new, y_train_new, y_val_new = train_test_split(train_X, 
+                train_y, test_size=0.25, random_state=SEED)
+    print('X_train_new.shape is {}, X_val_new.shape is {}, test_X.shape is {}'.format(
+          X_train_new.shape, X_val_new.shape, test_X.shape))
     
     lgbm = lgb.LGBMClassifier(**lgbm_param)
     lgbm.fit(X_train_new, y_train_new, eval_set=[(X_train_new, y_train_new), 
@@ -256,9 +225,12 @@ def test_param(lgbm_param):
     
     gc.collect()
     best_iteration = lgbm.best_iteration_
-    print('best best_score_ is ', lgbm.best_score_)
     print('best score value is ', lgbm.best_score_['valid_1']['LOG_LOSS'])
     logloss_val = round(lgbm.best_score_['valid_1']['LOG_LOSS'], 5)
+    
+#    logloss_val = 0.41926
+#best score value is  0.41926362390375443
+#full fit n_estimators is  514
     
 #    y_predictions_whole = lgbm.predict_proba(train_X)[:,1]
 #    RMSLE_score_lgb_whole = round(log_loss(train_y, y_predictions_whole), 5)
@@ -297,7 +269,7 @@ def test_param(lgbm_param):
            header=['predicted_score'])
     print('partial get predict outcome cost time: ', time.time()-start_t)
     
-    del lgbm
+    del lgbm, X_train_new, X_val_new, y_train_new, y_val_new
     gc.collect()
     
     start_t = time.time()
@@ -315,14 +287,18 @@ def test_param(lgbm_param):
     
     write_to_log('-'*25, ' md5 value: ', param_md5_str, '-'*25)
     write_to_log('param: ', lgbm_param)
-    write_to_log('best_iteration: ', best_iteration)
-    write_to_log('valid rmse: ', RMSLE_score_lgb_val)
+    write_to_log('best_iteration: ', lgbm_param['n_estimators'])
+    write_to_log('valid rmse: ', logloss_val)
     write_to_log('-'*80+'\n')
 
-lgbm_param = {'n_estimators':300, 'n_jobs':-1, 'learning_rate':0.08, 
-              'random_state':SEED, 'max_depth':6, 'min_child_samples':1001,
-              'num_leaves':31, 'subsample':0.75, 'colsample_bytree':0.8,
-              'subsample_freq':1, 'silent':-1, 'verbose':-1}
+#lgbm_param = {'n_estimators':500, 'n_jobs':-1, 'learning_rate':0.08,
+#              'random_state':SEED, 'max_depth':6, 'min_child_samples':71,
+#              'num_leaves':31, 'subsample':0.75, 'colsample_bytree':0.8,
+#              'subsample_freq':1, 'silent':-1, 'verbose':-1}
+
+lgbm_param = {'n_estimators':1000, 'n_jobs':-1, 'learning_rate':0.08,
+              'random_state':SEED, 'max_depth':-1, 
+              'num_leaves':31, 'silent':-1, 'verbose':-1}
 
 test_param(lgbm_param)
 
