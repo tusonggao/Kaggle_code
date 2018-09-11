@@ -174,7 +174,7 @@ gc.collect()
 #    'C:/D_Disk/data_competition/xunfei_ai_ctr/data/merged_df_dtypes.csv'
 #)
 
-user_tags_df = generate_user_tags_df(merged_df)
+#user_tags_df = generate_user_tags_df(merged_df)
 
 start_t = time.time()
 merged_df.drop(['advert_industry_inner', 'osv', 'make', 'user_tags', 
@@ -184,19 +184,12 @@ merged_df = pd.get_dummies(merged_df)
 print('merged_df.shape 222 is {} merge data cost time:{}'.format(
        merged_df.shape, time.time()-start_t))
 
-#user_tags_list = []
-#with open('C:/D_Disk/data_competition/xunfei_ai_ctr/data/user_tags.txt') as file:
-#    for line in file:
-#        user_tags_list.append(line.strip())
-#user_tags_dtype_dict = {('user_tags'+s):np.int8 for s in user_tags_list}
-#print('user_tags_dtype_dict is ', user_tags_dtype_dict)
-
-start_t = time.time()
-merged_df = merged_df.join(user_tags_df, how='left')
-print('after join merged_df.shape: {} join cost time:{} mem_usage:{}',
-      merged_df.shape, time.time()-start_t, mem_usage(merged_df))
-del user_tags_df
-gc.collect()
+#start_t = time.time()
+#merged_df = merged_df.join(user_tags_df, how='left')
+#print('after join merged_df.shape: {} join cost time:{} mem_usage:{}',
+#      merged_df.shape, time.time()-start_t, mem_usage(merged_df))
+#del user_tags_df
+#gc.collect()
 
 #merged_df.info(memory_usage='deep')
 
@@ -263,27 +256,31 @@ def test_param(lgbm_param):
     
     gc.collect()
     best_iteration = lgbm.best_iteration_
-    y_predictions_whole = lgbm.predict_proba(train_X)[:,1]
-    RMSLE_score_lgb_whole = round(log_loss(train_y, y_predictions_whole), 5)
-    logloss_score_tsg = round(log_loss_tsg(train_y, y_predictions_whole), 5)
+    print('best best_score_ is ', lgbm.best_score_)
+    print('best score value is ', lgbm.best_score_['valid_1']['LOG_LOSS'])
+    logloss_val = round(lgbm.best_score_['valid_1']['LOG_LOSS'], 5)
     
-    gc.collect()
-    
-    y_predictions_train = lgbm.predict_proba(X_train_new)[:,1]
-    RMSLE_score_lgb_train = round(log_loss(y_train_new, y_predictions_train), 5)
-    
-    y_predictions_val = lgbm.predict_proba(X_val_new)[:,1]
-    RMSLE_score_lgb_val = round(log_loss(y_val_new, y_predictions_val), 5)
-    
-    len_to_get = int(0.20*len(y_val_new))
-    RMSLE_score_lgb_val_20_percent = log_loss(y_val_new[:len_to_get], y_predictions_val[:len_to_get])
-    
-    print('partial data whole_score: {} logloss_score_tsg: {} '
-          'train score: {}  test score: {}, '
-          'RMSLE_score_lgb_val_20_percent: {}'.format(
-           RMSLE_score_lgb_whole, logloss_score_tsg, 
-           RMSLE_score_lgb_train, RMSLE_score_lgb_val,
-           RMSLE_score_lgb_val_20_percent))
+#    y_predictions_whole = lgbm.predict_proba(train_X)[:,1]
+#    RMSLE_score_lgb_whole = round(log_loss(train_y, y_predictions_whole), 5)
+#    logloss_score_tsg = round(log_loss_tsg(train_y, y_predictions_whole), 5)
+#    
+#    gc.collect()
+#    
+#    y_predictions_train = lgbm.predict_proba(X_train_new)[:,1]
+#    RMSLE_score_lgb_train = round(log_loss(y_train_new, y_predictions_train), 5)
+
+#    y_predictions_val = lgbm.predict_proba(X_val_new)[:,1]
+#    RMSLE_score_lgb_val = round(log_loss(y_val_new, y_predictions_val), 5)
+#    
+#    len_to_get = int(0.20*len(y_val_new))
+#    RMSLE_score_lgb_val_20_percent = log_loss(y_val_new[:len_to_get], y_predictions_val[:len_to_get])
+#    
+#    print('partial data whole_score: {} logloss_score_tsg: {} '
+#          'train score: {}  test score: {}, '
+#          'RMSLE_score_lgb_val_20_percent: {}'.format(
+#           RMSLE_score_lgb_whole, logloss_score_tsg, 
+#           RMSLE_score_lgb_train, RMSLE_score_lgb_val,
+#           RMSLE_score_lgb_val_20_percent))
     
     start_t = time.time()
     prediction_click_prob = lgbm.predict_proba(test_X)[:,1]
@@ -293,14 +290,16 @@ def test_param(lgbm_param):
     print('full fit n_estimators is ', int(best_iteration*1.1))
     param_md5_str = convert_2_md5(lgbm_param)
     store_path = 'C:/D_Disk/data_competition/xunfei_ai_ctr/outcome/'
-    partial_file_name = '_'.join(['submission_partial', str(RMSLE_score_lgb_val), param_md5_str]) + '.csv'
-    full_file_name = '_'.join(['submission_full', str(RMSLE_score_lgb_val), param_md5_str]) + '.csv'
+    partial_file_name = '_'.join(['submission_partial', str(logloss_val), param_md5_str]) + '.csv'
+    full_file_name = '_'.join(['submission_full', str(logloss_val), param_md5_str]) + '.csv'
     
     outcome_df['predicted_score'].to_csv(store_path+partial_file_name,
            header=['predicted_score'])
     print('partial get predict outcome cost time: ', time.time()-start_t)
     
+    del lgbm
     gc.collect()
+    
     start_t = time.time()
     lgbm = lgb.LGBMClassifier(**lgbm_param)
     lgbm.fit(train_X, train_y)
@@ -320,7 +319,7 @@ def test_param(lgbm_param):
     write_to_log('valid rmse: ', RMSLE_score_lgb_val)
     write_to_log('-'*80+'\n')
 
-lgbm_param = {'n_estimators':600, 'n_jobs':-1, 'learning_rate':0.08, 
+lgbm_param = {'n_estimators':300, 'n_jobs':-1, 'learning_rate':0.08, 
               'random_state':SEED, 'max_depth':6, 'min_child_samples':1001,
               'num_leaves':31, 'subsample':0.75, 'colsample_bytree':0.8,
               'subsample_freq':1, 'silent':-1, 'verbose':-1}
