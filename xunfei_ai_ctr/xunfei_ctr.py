@@ -62,6 +62,44 @@ def generate_user_tags_df(merged_df):
     
     return user_tags_df_sparse
 
+def process_make_feature(merged_df, num=100):
+    print('in process_make_feature')
+    start_t = time.time()
+    saved_makes = list(merged_df.make.value_counts(dropna=False)[:num].index)
+    merged_df['make'] = merged_df['make'].map(lambda x: 
+                            x if x in saved_makes else 'na')
+#    print(merged_df['make'].value_counts())
+    print('cost time ', time.time()-start_t)
+    return merged_df
+
+def process_model_feature(merged_df, num=100):
+    print('in process_model_feature')
+    start_t = time.time()
+    saved_models = list(merged_df.model.value_counts(dropna=False)[:num].index)
+    merged_df['model'] = merged_df['model'].map(lambda x: 
+                            x if x in saved_models else 'na')
+    print('cost time ', time.time()-start_t)
+    return merged_df
+
+def process_osv_feature(merged_df, num=100):
+    print('in process_osv_feature')
+    start_t = time.time()
+    saved_osvs = list(merged_df.osv.value_counts(dropna=False)[:num].index)
+    merged_df['osv'] = merged_df['osv'].map(lambda x: 
+                            x if x in saved_osvs else 'na')
+    print('cost time ', time.time()-start_t)
+    return merged_df
+
+def process_slot_id_feature(merged_df, num=100):
+    print('in process_osv_feature')
+    start_t = time.time()
+    saved_ids = list(merged_df['inner_slot_id'].value_counts(dropna=False)[:num].index)
+    merged_df['inner_slot_id'] = merged_df['inner_slot_id'].map(
+                                 lambda x: x if x in saved_ids else 'na')
+    print('cost time ', time.time()-start_t)
+    return merged_df
+
+
 
 def generate_numeric_dtypes(df, store_file_path=None):
     int_types = ["uint8", "int8", "int16", 'int32', 'int64']
@@ -176,39 +214,47 @@ gc.collect()
 #    'C:/D_Disk/data_competition/xunfei_ai_ctr/data/merged_df_dtypes.csv'
 #)
 
-user_tags_df_sparse = generate_user_tags_df(merged_df)
+#user_tags_df_sparse = generate_user_tags_df(merged_df)
 
 start_t = time.time()
-merged_df.drop(['advert_industry_inner', 'osv', 'make', 'user_tags', 
-                'model', 'inner_slot_id'],
+merged_df.drop(['osv', 'time', 'user_tags', 
+                'inner_slot_id'],
                  axis=1, inplace=True)
-merged_df = pd.get_dummies(merged_df)
+
+merged_df = process_make_feature(merged_df, num=100)
+merged_df = process_model_feature(merged_df, num=200)
+merged_df = process_osv_feature(merged_df, num=80)
+merged_df = process_slot_id_feature(merged_df, num=80)
+
+merged_df = pd.get_dummies(merged_df, 
+                columns=['city', 'province', 'os_name', 'f_channel', 
+                         'advert_name', 'creative_type', 'app_cate_id',
+                         'advert_industry_inner', 'carrier', 'nnt',
+                         'devtype', 'os', 'make', 'model', 'osv'])
 print('merged_df.shape 222 is {} merge data cost time:{}'.format(
        merged_df.shape, time.time()-start_t))
 
-start_t = time.time()
-merged_df = merged_df.join(user_tags_df_sparse, how='left')
-print('after join merged_df.shape: {} join cost time:{} mem_usage:{}',
-      merged_df.shape, time.time()-start_t, mem_usage(merged_df))
-del user_tags_df_sparse
-gc.collect()
+#start_t = time.time()
+#merged_df = merged_df.join(user_tags_df_sparse, how='left')
+#print('after join merged_df.shape: {} join cost time:{} mem_usage:{}',
+#      merged_df.shape, time.time()-start_t, mem_usage(merged_df))
+#del user_tags_df_sparse
+#gc.collect()
 
 #merged_df.info(memory_usage='deep')
 
 train_df = merged_df[pd.notna(merged_df['click'])]
 train_y = train_df['click']
 train_X = train_df.drop(['click'], axis=1)
-train_X_np = train_X.values
-train_y_np = train_y.values
-print('type of train_X_np is ', type(train_X_np), train_X_np.shape)
-print('type of train_y_np is ', type(train_y_np), train_y_np.shape)
+#train_X_np = train_X.values
+#train_y_np = train_y.values
+#print('type of train_X_np is ', type(train_X_np), train_X_np.shape)
+#print('type of train_y_np is ', type(train_y_np), train_y_np.shape)
 del train_df
 gc.collect()
 
 test_df = merged_df[pd.isna(merged_df['click'])]
 test_X = test_df.drop(['click'], axis=1)
-
-
 
 outcome_df = pd.DataFrame()
 outcome_df['instance_id'] = test_df.index
@@ -221,76 +267,54 @@ def test_param(lgbm_param):
     print('in test_param')
     gc.collect()
     
-#    print('start train_test_split')
-#    X_train_new, X_val_new, y_train_new, y_val_new = train_test_split(train_X, 
-#                train_y, test_size=0.25, random_state=SEED)
-#    print('X_train_new.shape is {}, X_val_new.shape is {}, test_X.shape is {}'.format(
-#          X_train_new.shape, X_val_new.shape, test_X.shape))
-#    
-#    start_t = time.time()
-#    lgbm = lgb.LGBMClassifier(**lgbm_param)
-#    print('get starting partial fit cost time ', time.time()-start_t)
-#    
-#    start_t = time.time()
-#    print('start partial trainning')
-#    lgbm.fit(X_train_new, y_train_new, eval_set=[(X_train_new, y_train_new), 
-#            (X_val_new, y_val_new)], eval_metric=log_loss_def, 
-#            verbose=100, early_stopping_rounds=300)
-#    print('partial fit cost time: ', time.time()-start_t)
-#    
-#    best_iteration = lgbm.best_iteration_
-#    print('best score value is ', lgbm.best_score_['valid_1']['LOG_LOSS'])
-#    logloss_val = round(lgbm.best_score_['valid_1']['LOG_LOSS'], 5)
+    print('start train_test_split')
+    X_train_new, X_val_new, y_train_new, y_val_new = train_test_split(train_X, 
+                train_y, test_size=0.25, random_state=SEED)
+    print('X_train_new.shape is {}, X_val_new.shape is {}, test_X.shape is {}'.format(
+          X_train_new.shape, X_val_new.shape, test_X.shape))
     
-    logloss_val = 0.41917
+    start_t = time.time()
+    lgbm = lgb.LGBMClassifier(**lgbm_param)
+    print('get starting partial fit cost time ', time.time()-start_t)
+    
+    start_t = time.time()
+    print('start partial trainning')
+    lgbm.fit(X_train_new, y_train_new, eval_set=[(X_train_new, y_train_new), 
+            (X_val_new, y_val_new)], eval_metric=log_loss_def, 
+            verbose=100, early_stopping_rounds=300)
+    print('partial fit cost time: ', time.time()-start_t)
+    
+    best_iteration = lgbm.best_iteration_
+    print('best score value is ', lgbm.best_score_['valid_1']['LOG_LOSS'])
+    logloss_val = round(lgbm.best_score_['valid_1']['LOG_LOSS'], 5)
+    
+#    logloss_val = 0.41917
 #best score value is  0.41926362390375443
 #full fit n_estimators is  514
     
-#    y_predictions_whole = lgbm.predict_proba(train_X)[:,1]
-#    RMSLE_score_lgb_whole = round(log_loss(train_y, y_predictions_whole), 5)
-#    logloss_score_tsg = round(log_loss_tsg(train_y, y_predictions_whole), 5)
-#    
-#    gc.collect()
-#    
-#    y_predictions_train = lgbm.predict_proba(X_train_new)[:,1]
-#    RMSLE_score_lgb_train = round(log_loss(y_train_new, y_predictions_train), 5)
-
-#    y_predictions_val = lgbm.predict_proba(X_val_new)[:,1]
-#    RMSLE_score_lgb_val = round(log_loss(y_val_new, y_predictions_val), 5)
-#    
-#    len_to_get = int(0.20*len(y_val_new))
-#    RMSLE_score_lgb_val_20_percent = log_loss(y_val_new[:len_to_get], y_predictions_val[:len_to_get])
-#    
-#    print('partial data whole_score: {} logloss_score_tsg: {} '
-#          'train score: {}  test score: {}, '
-#          'RMSLE_score_lgb_val_20_percent: {}'.format(
-#           RMSLE_score_lgb_whole, logloss_score_tsg, 
-#           RMSLE_score_lgb_train, RMSLE_score_lgb_val,
-#           RMSLE_score_lgb_val_20_percent))
+    start_t = time.time()
+    prediction_click_prob = lgbm.predict_proba(test_X)[:,1]
+    outcome_df['predicted_score'] = prediction_click_prob
     
-#    start_t = time.time()
-#    prediction_click_prob = lgbm.predict_proba(test_X)[:,1]
-#    outcome_df['predicted_score'] = prediction_click_prob
-#    
-#    lgbm_param['n_estimators'] = int(best_iteration*1.1)
-#    print('full fit n_estimators is ', int(best_iteration*1.1))
+    lgbm_param['n_estimators'] = int(best_iteration*1.1)
+    print('full fit n_estimators is ', int(best_iteration*1.1))
     param_md5_str = convert_2_md5(lgbm_param)
     store_path = 'C:/D_Disk/data_competition/xunfei_ai_ctr/outcome/'
-#    partial_file_name = '_'.join(['submission_partial', str(logloss_val), param_md5_str]) + '.csv'
+    partial_file_name = '_'.join(['submission_partial', str(logloss_val), param_md5_str]) + '.csv'
     full_file_name = '_'.join(['submission_full', str(logloss_val), param_md5_str]) + '.csv'
-#    
-#    outcome_df['predicted_score'].to_csv(store_path+partial_file_name,
-#           header=['predicted_score'])
-#    print('partial get predict outcome cost time: ', time.time()-start_t)
-#    
-#    del lgbm
-#    gc.collect()
-#    del X_train_new, X_val_new
-#    gc.collect()
-#    del y_train_new, y_val_new
-#    gc.collect()
-#    for i in range(5):
-#        gc.collect()
+    
+    outcome_df['predicted_score'].to_csv(store_path+partial_file_name,
+           header=['predicted_score'])
+    print('partial get predict outcome cost time: ', time.time()-start_t)
+    
+    del lgbm
+    gc.collect()
+    del X_train_new, X_val_new
+    gc.collect()
+    del y_train_new, y_val_new
+    gc.collect()
+    for i in range(5):
+        gc.collect()
     
     start_t = time.time()
     lgbm = lgb.LGBMClassifier(**lgbm_param)
@@ -319,14 +343,14 @@ def test_param(lgbm_param):
 #              'num_leaves':31, 'subsample':0.75, 'colsample_bytree':0.8,
 #              'subsample_freq':1, 'silent':-1, 'verbose':-1}
 
-lgbm_param = {'n_estimators':520, 'n_jobs':-1, 'learning_rate':0.08,
-              'random_state':SEED, 'max_depth':6, 'min_child_samples':101,
-              'num_leaves':31, 'subsample':0.75, 'colsample_bytree':0.5,
+lgbm_param = {'n_estimators':1200, 'n_jobs':-1, 'learning_rate':0.08,
+              'random_state':SEED, 'max_depth':6, 'min_child_samples':71,
+              'num_leaves':31, 'subsample':0.75, 'colsample_bytree':0.2,
               'subsample_freq':3, 'silent':-1, 'verbose':-1}
 
 #lgbm_param = {'n_estimators':1000, 'n_jobs':-1, 'learning_rate':0.08,
 #              'random_state':SEED, 'max_depth':-1, 
 #              'num_leaves':31, 'silent':-1, 'verbose':-1}
 
-#test_param(lgbm_param)
+test_param(lgbm_param)
 
