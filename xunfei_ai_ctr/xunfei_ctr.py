@@ -150,6 +150,9 @@ test_df = pd.read_csv('C:/D_Disk/data_competition/xunfei_ai_ctr/data/round1_ifly
                        sep='\t', index_col=0, header=0, dtype=dtypes_dict,
                        engine='python', encoding='utf-8')
 
+del best_dtypes_df, dtypes_dict
+gc.collect()
+
 print('train_df.shape is {} test_df.shape is {} load data cost time:{}'.format(
        train_df.shape, test_df.shape, time.time()-start_t))
 
@@ -195,11 +198,17 @@ gc.collect()
 train_df = merged_df[pd.notna(merged_df['click'])]
 train_y = train_df['click']
 train_X = train_df.drop(['click'], axis=1)
+train_X_np = train_X.values
+train_y_np = train_y.values
+print('type of train_X_np is ', type(train_X_np), train_X_np.shape)
+print('type of train_y_np is ', type(train_y_np), train_y_np.shape)
 del train_df
 gc.collect()
 
 test_df = merged_df[pd.isna(merged_df['click'])]
 test_X = test_df.drop(['click'], axis=1)
+
+
 
 outcome_df = pd.DataFrame()
 outcome_df['instance_id'] = test_df.index
@@ -212,23 +221,28 @@ def test_param(lgbm_param):
     print('in test_param')
     gc.collect()
     
-    print('start train_test_split')
-    X_train_new, X_val_new, y_train_new, y_val_new = train_test_split(train_X, 
-                train_y, test_size=0.25, random_state=SEED)
-    print('X_train_new.shape is {}, X_val_new.shape is {}, test_X.shape is {}'.format(
-          X_train_new.shape, X_val_new.shape, test_X.shape))
+#    print('start train_test_split')
+#    X_train_new, X_val_new, y_train_new, y_val_new = train_test_split(train_X, 
+#                train_y, test_size=0.25, random_state=SEED)
+#    print('X_train_new.shape is {}, X_val_new.shape is {}, test_X.shape is {}'.format(
+#          X_train_new.shape, X_val_new.shape, test_X.shape))
+#    
+#    start_t = time.time()
+#    lgbm = lgb.LGBMClassifier(**lgbm_param)
+#    print('get starting partial fit cost time ', time.time()-start_t)
+#    
+#    start_t = time.time()
+#    print('start partial trainning')
+#    lgbm.fit(X_train_new, y_train_new, eval_set=[(X_train_new, y_train_new), 
+#            (X_val_new, y_val_new)], eval_metric=log_loss_def, 
+#            verbose=100, early_stopping_rounds=300)
+#    print('partial fit cost time: ', time.time()-start_t)
+#    
+#    best_iteration = lgbm.best_iteration_
+#    print('best score value is ', lgbm.best_score_['valid_1']['LOG_LOSS'])
+#    logloss_val = round(lgbm.best_score_['valid_1']['LOG_LOSS'], 5)
     
-    lgbm = lgb.LGBMClassifier(**lgbm_param)
-    lgbm.fit(X_train_new, y_train_new, eval_set=[(X_train_new, y_train_new), 
-            (X_val_new, y_val_new)], eval_metric=log_loss_def, 
-            verbose=100, early_stopping_rounds=300)
-    
-    gc.collect()
-    best_iteration = lgbm.best_iteration_
-    print('best score value is ', lgbm.best_score_['valid_1']['LOG_LOSS'])
-    logloss_val = round(lgbm.best_score_['valid_1']['LOG_LOSS'], 5)
-    
-#    logloss_val = 0.41926
+    logloss_val = 0.41917
 #best score value is  0.41926362390375443
 #full fit n_estimators is  514
     
@@ -254,26 +268,35 @@ def test_param(lgbm_param):
 #           RMSLE_score_lgb_train, RMSLE_score_lgb_val,
 #           RMSLE_score_lgb_val_20_percent))
     
-    start_t = time.time()
-    prediction_click_prob = lgbm.predict_proba(test_X)[:,1]
-    outcome_df['predicted_score'] = prediction_click_prob
-    
-    lgbm_param['n_estimators'] = int(best_iteration*1.1)
-    print('full fit n_estimators is ', int(best_iteration*1.1))
+#    start_t = time.time()
+#    prediction_click_prob = lgbm.predict_proba(test_X)[:,1]
+#    outcome_df['predicted_score'] = prediction_click_prob
+#    
+#    lgbm_param['n_estimators'] = int(best_iteration*1.1)
+#    print('full fit n_estimators is ', int(best_iteration*1.1))
     param_md5_str = convert_2_md5(lgbm_param)
     store_path = 'C:/D_Disk/data_competition/xunfei_ai_ctr/outcome/'
-    partial_file_name = '_'.join(['submission_partial', str(logloss_val), param_md5_str]) + '.csv'
+#    partial_file_name = '_'.join(['submission_partial', str(logloss_val), param_md5_str]) + '.csv'
     full_file_name = '_'.join(['submission_full', str(logloss_val), param_md5_str]) + '.csv'
-    
-    outcome_df['predicted_score'].to_csv(store_path+partial_file_name,
-           header=['predicted_score'])
-    print('partial get predict outcome cost time: ', time.time()-start_t)
-    
-    del lgbm, X_train_new, X_val_new, y_train_new, y_val_new
-    gc.collect()
+#    
+#    outcome_df['predicted_score'].to_csv(store_path+partial_file_name,
+#           header=['predicted_score'])
+#    print('partial get predict outcome cost time: ', time.time()-start_t)
+#    
+#    del lgbm
+#    gc.collect()
+#    del X_train_new, X_val_new
+#    gc.collect()
+#    del y_train_new, y_val_new
+#    gc.collect()
+#    for i in range(5):
+#        gc.collect()
     
     start_t = time.time()
     lgbm = lgb.LGBMClassifier(**lgbm_param)
+    print('starting before fit cost time ', time.time()-start_t)
+    
+    start_t = time.time()
     lgbm.fit(train_X, train_y)
     print('full fit cost time: ', time.time()-start_t)
     
@@ -291,14 +314,19 @@ def test_param(lgbm_param):
     write_to_log('valid rmse: ', logloss_val)
     write_to_log('-'*80+'\n')
 
-#lgbm_param = {'n_estimators':500, 'n_jobs':-1, 'learning_rate':0.08,
+#lgbm_param = {'n_estimators':800, 'n_jobs':-1, 'learning_rate':0.08,
 #              'random_state':SEED, 'max_depth':6, 'min_child_samples':71,
 #              'num_leaves':31, 'subsample':0.75, 'colsample_bytree':0.8,
 #              'subsample_freq':1, 'silent':-1, 'verbose':-1}
 
-lgbm_param = {'n_estimators':1000, 'n_jobs':-1, 'learning_rate':0.08,
-              'random_state':SEED, 'max_depth':-1, 
-              'num_leaves':31, 'silent':-1, 'verbose':-1}
+lgbm_param = {'n_estimators':520, 'n_jobs':-1, 'learning_rate':0.08,
+              'random_state':SEED, 'max_depth':6, 'min_child_samples':101,
+              'num_leaves':31, 'subsample':0.75, 'colsample_bytree':0.5,
+              'subsample_freq':3, 'silent':-1, 'verbose':-1}
 
-test_param(lgbm_param)
+#lgbm_param = {'n_estimators':1000, 'n_jobs':-1, 'learning_rate':0.08,
+#              'random_state':SEED, 'max_depth':-1, 
+#              'num_leaves':31, 'silent':-1, 'verbose':-1}
+
+#test_param(lgbm_param)
 
