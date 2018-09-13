@@ -33,29 +33,50 @@ def mem_usage(pandas_obj):
     usage_mb = usage_b / 1024 ** 2 # convert bytes to megabytes
     return "{:03.2f} MB".format(usage_mb)
 
-def generate_user_tags_df(merged_df):
+def generate_user_tags_df(merged_df, keep_tags_num=100):
     start_t = time.time()
     print('into generate_user_tags_df')
-    row_list = []
+    
     count = 0
+    user_tags_set = set()
+    row_list = []
+    user_tags_counter_dict = {}
+
     for index, row in merged_df.iterrows():
         user_tags_str = row['user_tags']
         count += 1
         user_tags_dict = {}
+        
         for s in str(user_tags_str).split(','):
             if len(s)>0 and s!='nan':
                 user_tags_dict['user_tags' + s] = 1
+                if ('user_tags' + s) in user_tags_counter_dict:
+                    user_tags_counter_dict['user_tags' + s] += 1
+                else:
+                    user_tags_counter_dict['user_tags' + s] = 1
+                user_tags_set.add(s)
         row_list.append(user_tags_dict)
 
-    print('row list len is ', len(row_list))
+    top_user_tags = sorted(user_tags_counter_dict.keys(), 
+                        key=lambda x: user_tags_counter_dict[x],
+                        reverse=True)
+    selected_tags = top_user_tags[:keep_tags_num]
+#    print('top_user_tags is ', selected_tags)
+
+    for i in range(len(row_list)):
+        new_dict = {}
+        for k, v in row_list[i].items():
+            if k in selected_tags:
+                new_dict[k] = v
+        row_list[i] = new_dict
+    
     user_tags_df = pd.DataFrame(row_list, dtype=np.int8)
     user_tags_df.index = merged_df.index
-    print('geting out of generate_user_tags_df, cost time: ',
-          time.time()-start_t, 'user_tags_df.shape is ',
-          user_tags_df.shape, 'mem_usage is ',
-          mem_usage(user_tags_df))
-    
     user_tags_df_sparse = user_tags_df.to_sparse()
+    
+    print('getting out generate_user_tags_df, cost time: ',
+           time.time()-start_t, 'mem_usage: {}',
+           mem_usage(user_tags_df_sparse))
     
     del user_tags_df
     gc.collect()
@@ -91,7 +112,7 @@ def process_osv_feature(merged_df, num=100):
     return merged_df
 
 def process_slot_id_feature(merged_df, num=100):
-    print('in process_osv_feature')
+    print('in process_slot_id_feature')
     start_t = time.time()
     saved_ids = list(merged_df['inner_slot_id'].value_counts(dropna=False)[:num].index)
     merged_df['inner_slot_id'] = merged_df['inner_slot_id'].map(
@@ -99,7 +120,26 @@ def process_slot_id_feature(merged_df, num=100):
     print('cost time ', time.time()-start_t)
     return merged_df
 
-
+def process_time_feature(merged_df):
+    def convert_to_hour(time_stamp):
+        timeArray = time.localtime(time_stamp)
+        time_str = time.strftime("%Y-%m-%d %H:%M:%S", timeArray)
+        return int(time_str.split()[1].split(':')[0])
+    print('in process_time_feature')
+    start_t = time.time()
+    merged_df['hour'] = merged_df['time'].map(convert_to_hour)
+    
+    merged_df['is_midnight'] = 0
+    merged_df.loc[(merged_df['hour']>=23) | (merged_df['hour']<=4), 'is_midnight'] = 1
+    
+    merged_df['is_afternoon'] = 0
+    merged_df.loc[(merged_df['hour']>=13) & (merged_df['hour']<=17), 'is_afternoon'] = 1
+    
+    merged_df['is_morning'] = 0
+    merged_df.loc[(merged_df['hour']>=7) & (merged_df['hour']<=11), 'is_morning'] = 1
+    
+    print('cost time ', time.time()-start_t)
+    return merged_df
 
 def generate_numeric_dtypes(df, store_file_path=None):
     int_types = ["uint8", "int8", "int16", 'int32', 'int64']
@@ -214,47 +254,58 @@ gc.collect()
 #    'C:/D_Disk/data_competition/xunfei_ai_ctr/data/merged_df_dtypes.csv'
 #)
 
-#user_tags_df_sparse = generate_user_tags_df(merged_df)
+user_tags_df_sparse = generate_user_tags_df(merged_df)
 
 start_t = time.time()
-merged_df.drop(['osv', 'time', 'user_tags', 
-                'inner_slot_id'],
-                 axis=1, inplace=True)
+
+merged_df.sort_values(by=['time'], ascending=False, inplace=True)
+merged_df.drop(['user_tags'], 
+               axis=1, inplace=True)
 
 merged_df = process_make_feature(merged_df, num=100)
-merged_df = process_model_feature(merged_df, num=200)
+merged_df = process_model_feature(merged_df, num=210)
 merged_df = process_osv_feature(merged_df, num=80)
 merged_df = process_slot_id_feature(merged_df, num=80)
+merged_df = process_time_feature(merged_df)
 
 merged_df = pd.get_dummies(merged_df, 
                 columns=['city', 'province', 'os_name', 'f_channel', 
-                         'advert_name', 'creative_type', 'app_cate_id',
+                         'advert_name', 'advert_id', 'creative_type', 
+                         'app_cate_id',
                          'advert_industry_inner', 'carrier', 'nnt',
-                         'devtype', 'os', 'make', 'model', 'osv'])
-print('merged_df.shape 222 is {} merge data cost time:{}'.format(
-       merged_df.shape, time.time()-start_t))
+                         'devtype', 'os','make', 'model', 'osv', 
+                         'inner_slot_id'])
+print('merged_df.shape 222 is {} merge data cost time:{}, mem_usage:{}'.format(
+       merged_df.shape, time.time()-start_t, mem_usage(merged_df)))
 
-#start_t = time.time()
-#merged_df = merged_df.join(user_tags_df_sparse, how='left')
-#print('after join merged_df.shape: {} join cost time:{} mem_usage:{}',
-#      merged_df.shape, time.time()-start_t, mem_usage(merged_df))
-#del user_tags_df_sparse
-#gc.collect()
+start_t = time.time()
+merged_df = merged_df.join(user_tags_df_sparse, how='left')
+print('after join merged_df.shape: {} join cost time:{} mem_usage:{}'.format(
+      merged_df.shape, time.time()-start_t, mem_usage(merged_df)))
+del user_tags_df_sparse
+gc.collect()
 
 #merged_df.info(memory_usage='deep')
 
 train_df = merged_df[pd.notna(merged_df['click'])]
 train_y = train_df['click']
-train_X = train_df.drop(['click'], axis=1)
-#train_X_np = train_X.values
-#train_y_np = train_y.values
-#print('type of train_X_np is ', type(train_X_np), train_X_np.shape)
-#print('type of train_y_np is ', type(train_y_np), train_y_np.shape)
-del train_df
+train_X = train_df.drop(['click', 'time'], axis=1)
+
+train_df_split_train = train_df[train_df['time']<2190556800]
+train_df_split_val = train_df[train_df['time']>=2190556800]
+
+y_train_new = train_df_split_train['click']
+X_train_new = train_df_split_train.drop(['click', 'time'], axis=1)
+y_val_new = train_df_split_val['click']
+X_val_new = train_df_split_val.drop(['click', 'time'], axis=1)
+print('X_train_new.shape is {}, X_val_new.shape is {}'.format(
+       X_train_new.shape, X_val_new.shape))
+
+del train_df, train_df_split_train, train_df_split_val
 gc.collect()
 
 test_df = merged_df[pd.isna(merged_df['click'])]
-test_X = test_df.drop(['click'], axis=1)
+test_X = test_df.drop(['click', 'time'], axis=1)
 
 outcome_df = pd.DataFrame()
 outcome_df['instance_id'] = test_df.index
@@ -266,12 +317,17 @@ gc.collect()
 def test_param(lgbm_param):
     print('in test_param')
     gc.collect()
+    global y_train_new, X_train_new, y_val_new, X_val_new
     
-    print('start train_test_split')
-    X_train_new, X_val_new, y_train_new, y_val_new = train_test_split(train_X, 
-                train_y, test_size=0.25, random_state=SEED)
-    print('X_train_new.shape is {}, X_val_new.shape is {}, test_X.shape is {}'.format(
-          X_train_new.shape, X_val_new.shape, test_X.shape))
+#    val_num = int(0.2*len(train_X))
+#    X_train_new = train_X.iloc[val_num:,:]
+#    y_train_new = train_y[val_num:]
+#    X_val_new = train_X.iloc[:val_num,:]
+#    y_val_new = train_y.iloc[:val_num]
+    
+#    print('start train_test_split')
+#    X_train_new, X_val_new, y_train_new, y_val_new = train_test_split(train_X, 
+#                train_y, test_size=0.25, random_state=SEED)
     
     start_t = time.time()
     lgbm = lgb.LGBMClassifier(**lgbm_param)
@@ -287,11 +343,7 @@ def test_param(lgbm_param):
     best_iteration = lgbm.best_iteration_
     print('best score value is ', lgbm.best_score_['valid_1']['LOG_LOSS'])
     logloss_val = round(lgbm.best_score_['valid_1']['LOG_LOSS'], 5)
-    
-#    logloss_val = 0.41917
-#best score value is  0.41926362390375443
-#full fit n_estimators is  514
-    
+       
     start_t = time.time()
     prediction_click_prob = lgbm.predict_proba(test_X)[:,1]
     outcome_df['predicted_score'] = prediction_click_prob
@@ -343,14 +395,10 @@ def test_param(lgbm_param):
 #              'num_leaves':31, 'subsample':0.75, 'colsample_bytree':0.8,
 #              'subsample_freq':1, 'silent':-1, 'verbose':-1}
 
-lgbm_param = {'n_estimators':1200, 'n_jobs':-1, 'learning_rate':0.08,
+lgbm_param = {'n_estimators':1500, 'n_jobs':-1, 'learning_rate':0.09,
               'random_state':SEED, 'max_depth':6, 'min_child_samples':71,
               'num_leaves':31, 'subsample':0.75, 'colsample_bytree':0.2,
               'subsample_freq':3, 'silent':-1, 'verbose':-1}
-
-#lgbm_param = {'n_estimators':1000, 'n_jobs':-1, 'learning_rate':0.08,
-#              'random_state':SEED, 'max_depth':-1, 
-#              'num_leaves':31, 'silent':-1, 'verbose':-1}
 
 test_param(lgbm_param)
 
