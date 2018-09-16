@@ -23,7 +23,9 @@ from pandas.api.types import is_numeric_dtype
 import warnings
 warnings.simplefilter(action='ignore')
 
-SEED = 911
+#SEED = 911
+#SEED = 777
+SEED = 1234
 
 def mem_usage(pandas_obj):
     if isinstance(pandas_obj,pd.DataFrame):
@@ -32,6 +34,17 @@ def mem_usage(pandas_obj):
         usage_b = pandas_obj.memory_usage(deep=True)
     usage_mb = usage_b / 1024 ** 2 # convert bytes to megabytes
     return "{:03.2f} MB".format(usage_mb)
+
+def managed_change(val_click_prob, ratio=0.01):
+    val_click_prob_local = val_click_prob.copy()
+    val_click_prob_local.sort()
+    idx = int(len(val_click_prob)*ratio)
+    threshold_val = val_click_prob_local[-idx]
+    
+    val_click_prob_new = val_click_prob.copy()
+    val_click_prob_new[val_click_prob_new>=threshold_val] = 1.0
+    return val_click_prob_new
+    
 
 def generate_user_tags_df(merged_df, keep_tags_num=100):
     start_t = time.time()
@@ -96,10 +109,35 @@ def process_make_feature(merged_df, num=100):
 def process_model_feature(merged_df, num=100):
     print('in process_model_feature')
     start_t = time.time()
+    merged_df.model.fillna(value='na', inplace=True)
     saved_models = list(merged_df.model.value_counts(dropna=False)[:num].index)
     merged_df['model'] = merged_df['model'].map(lambda x: 
                             x if x in saved_models else 'na')
+    print('after model change ', merged_df.model.value_counts(dropna=False))
+    print('merged_df.model.isnull().sum() is ', 
+          merged_df.model.isnull().sum())
     print('cost time ', time.time()-start_t)
+    
+    train_df = merged_df[pd.notna(merged_df['click'])]
+    train_df = train_df.sample(frac=0.05, random_state=SEED)
+    print('in process_model_feature train_df.shape is ', train_df.shape)
+    model_agg = train_df.groupby('model').agg({'click': ['mean']})
+    model_agg.columns = ['model_click_mean']
+    print('in process_model_feature model_agg.shape is ', model_agg.shape,
+          model_agg.columns)
+    print('model_agg is ', model_agg)
+
+    print('before join merged_df.shape is ', merged_df.shape)
+#    print('merged_df.head(5) is ', merged_df.sample(30, random_state=SEED))
+    merged_df = merged_df.join(model_agg, how='left', on='model')
+    print('after join merged_df.shape is ', merged_df.shape)
+    print('merged_df.head(5) is ',
+          merged_df[merged_df.model!='na'].sample(10, random_state=SEED))
+    
+    
+    del train_df
+    gc.collect()
+
     return merged_df
 
 def process_osv_feature(merged_df, num=100):
@@ -111,6 +149,7 @@ def process_osv_feature(merged_df, num=100):
     print('cost time ', time.time()-start_t)
     return merged_df
 
+
 def process_slot_id_feature(merged_df, num=100):
     print('in process_slot_id_feature')
     start_t = time.time()
@@ -119,6 +158,37 @@ def process_slot_id_feature(merged_df, num=100):
                                  lambda x: x if x in saved_ids else 'na')
     print('cost time ', time.time()-start_t)
     return merged_df
+
+
+def process_industry_feature(merged_df):
+    print('in process_industry_feature')
+    start_t = time.time()
+    merged_df['advert_industry_first'] = merged_df['advert_industry_inner'].map(
+                                     lambda x: x.split('_')[0])
+    print('cost time ', time.time()-start_t)
+    return merged_df
+
+
+#def process_time_feature(merged_df):
+#    def convert_to_hour(time_stamp):
+#        timeArray = time.localtime(time_stamp)
+#        time_str = time.strftime("%Y-%m-%d %H:%M:%S", timeArray)
+#        return int(time_str.split()[1].split(':')[0])
+#    print('in process_time_feature')
+#    start_t = time.time()
+#    merged_df['hour'] = merged_df['time'].map(convert_to_hour)
+#    
+#    merged_df['is_midnight'] = 0
+#    merged_df.loc[(merged_df['hour']>=23) | (merged_df['hour']<=4), 'is_midnight'] = 1
+#    
+#    merged_df['is_afternoon'] = 0
+#    merged_df.loc[(merged_df['hour']>=13) & (merged_df['hour']<=17), 'is_afternoon'] = 1
+#    
+#    merged_df['is_morning'] = 0
+#    merged_df.loc[(merged_df['hour']>=7) & (merged_df['hour']<=11), 'is_morning'] = 1
+#    
+#    print('cost time ', time.time()-start_t)
+#    return merged_df
 
 def process_time_feature(merged_df):
     def convert_to_hour(time_stamp):
@@ -137,6 +207,8 @@ def process_time_feature(merged_df):
     
     merged_df['is_morning'] = 0
     merged_df.loc[(merged_df['hour']>=7) & (merged_df['hour']<=11), 'is_morning'] = 1
+    
+    merged_df['hour'] = merged_df['hour'].map(str)
     
     print('cost time ', time.time()-start_t)
     return merged_df
@@ -182,7 +254,9 @@ def generate_numeric_dtypes(df, store_file_path=None):
     return dtypes_dict_new
 
 def convert_2_md5(value):
-    return hashlib.md5(str(value).encode('utf-8')).hexdigest()
+    value = str(value) + str(SEED)
+    md5_str = hashlib.md5(value.encode('utf-8')).hexdigest()
+    return md5_str[:15]
 
 def write_to_log(*param):
     param_list = [str(s) for s in param]
@@ -254,40 +328,49 @@ gc.collect()
 #    'C:/D_Disk/data_competition/xunfei_ai_ctr/data/merged_df_dtypes.csv'
 #)
 
-user_tags_df_sparse = generate_user_tags_df(merged_df)
+#user_tags_df_sparse = generate_user_tags_df(merged_df, keep_tags_num=300)
+#user_tags_df_sparse = generate_user_tags_df(merged_df, keep_tags_num=150)
 
 start_t = time.time()
-
 merged_df.sort_values(by=['time'], ascending=False, inplace=True)
-merged_df.drop(['user_tags'], 
-               axis=1, inplace=True)
+merged_df.drop(['user_tags'], axis=1, inplace=True)
 
 merged_df = process_make_feature(merged_df, num=100)
-merged_df = process_model_feature(merged_df, num=210)
+#merged_df = process_model_feature(merged_df, num=220)
+merged_df = process_model_feature(merged_df, num=5)
 merged_df = process_osv_feature(merged_df, num=80)
 merged_df = process_slot_id_feature(merged_df, num=80)
 merged_df = process_time_feature(merged_df)
+merged_df = process_industry_feature(merged_df)
 
 merged_df = pd.get_dummies(merged_df, 
                 columns=['city', 'province', 'os_name', 'f_channel', 
-                         'advert_name', 'advert_id', 'creative_type', 
-                         'app_cate_id',
+                         'advert_name', 'creative_type', 'advert_id',
+                         'app_cate_id', 'advert_industry_first',
                          'advert_industry_inner', 'carrier', 'nnt',
                          'devtype', 'os','make', 'model', 'osv', 
-                         'inner_slot_id'])
+                         'inner_slot_id', 'hour'])
+    
 print('merged_df.shape 222 is {} merge data cost time:{}, mem_usage:{}'.format(
        merged_df.shape, time.time()-start_t, mem_usage(merged_df)))
 
-start_t = time.time()
-merged_df = merged_df.join(user_tags_df_sparse, how='left')
-print('after join merged_df.shape: {} join cost time:{} mem_usage:{}'.format(
-      merged_df.shape, time.time()-start_t, mem_usage(merged_df)))
-del user_tags_df_sparse
-gc.collect()
+#start_t = time.time()
+#merged_df = merged_df.join(user_tags_df_sparse, how='left')
+#print('after join merged_df.shape: {} join cost time:{} mem_usage:{}'.format(
+#      merged_df.shape, time.time()-start_t, mem_usage(merged_df)))
+#del user_tags_df_sparse
+#gc.collect()
 
 #merged_df.info(memory_usage='deep')
 
+
 train_df = merged_df[pd.notna(merged_df['click'])]
+train_df = train_df.sample(frac=0.05, random_state=SEED)
+
+#print('train_df.shape is ', train_df.shape)
+#model_agg = train_df.groupby('model').agg({'click': ['mean']})
+#print('model_agg.shape is ', model_agg.shape)
+
 train_y = train_df['click']
 train_X = train_df.drop(['click', 'time'], axis=1)
 
@@ -314,6 +397,19 @@ outcome_df.set_index('instance_id', inplace=True)
 del merged_df, test_df
 gc.collect()
 
+def generate_learning_rate_list(num=2000):
+    start_rate = 0.101
+    lst = [start_rate]*150
+    for i in range(1, 50):
+        current_rate = start_rate - i*0.001
+        if current_rate<0.04:
+            break
+        lst += [current_rate]*25
+    if num>len(lst):
+        lst += [0.04]*(num-len(lst))
+#    return lst[:num]
+    return [0.09]*num
+
 def test_param(lgbm_param):
     print('in test_param')
     gc.collect()
@@ -331,25 +427,49 @@ def test_param(lgbm_param):
     
     start_t = time.time()
     lgbm = lgb.LGBMClassifier(**lgbm_param)
-    print('get starting partial fit cost time ', time.time()-start_t)
-    
-    start_t = time.time()
+    learning_rate_func = lgb.reset_parameter(
+                       learning_rate = generate_learning_rate_list())
     print('start partial trainning')
-    lgbm.fit(X_train_new, y_train_new, eval_set=[(X_train_new, y_train_new), 
-            (X_val_new, y_val_new)], eval_metric=log_loss_def, 
-            verbose=100, early_stopping_rounds=300)
+    lgbm.fit(X_train_new, y_train_new, 
+             eval_set=[(X_train_new, y_train_new), (X_val_new, y_val_new)],
+             callbacks=[learning_rate_func],
+#            eval_metric=log_loss_def, 
+             eval_metric='logloss',
+#            eval_metric='auc', 
+             verbose=100, 
+             early_stopping_rounds=300)
     print('partial fit cost time: ', time.time()-start_t)
     
     best_iteration = lgbm.best_iteration_
-    print('best score value is ', lgbm.best_score_['valid_1']['LOG_LOSS'])
-    logloss_val = round(lgbm.best_score_['valid_1']['LOG_LOSS'], 5)
+#    print('best score value is ', lgbm.best_score_)
+#    logloss_val = round(lgbm.best_score_['valid_1']['auc'], 5)
+    logloss_val = round(lgbm.best_score_['valid_1']['binary_logloss'], 5)
+    
+    val_click_prob = lgbm.predict_proba(X_val_new)[:,1]
+#    val_click_prob_new = managed_change(val_click_prob)
+    print('after managed_change logloss is ',
+          log_loss(y_val_new, val_click_prob),
+          log_loss(y_val_new, managed_change(val_click_prob, ratio=0.01)),
+          log_loss(y_val_new, managed_change(val_click_prob, ratio=0.02)),
+          log_loss(y_val_new, managed_change(val_click_prob, ratio=0.05)),
+          log_loss(y_val_new, managed_change(val_click_prob, ratio=0.08)),
+          log_loss(y_val_new, managed_change(val_click_prob, ratio=0.10))
+          )
+    
+    print('after managed_change auc is ',
+          roc_auc_score(y_val_new, val_click_prob),
+          roc_auc_score(y_val_new, managed_change(val_click_prob, ratio=0.01)),
+          roc_auc_score(y_val_new, managed_change(val_click_prob, ratio=0.02)),
+          roc_auc_score(y_val_new, managed_change(val_click_prob, ratio=0.05)),
+          roc_auc_score(y_val_new, managed_change(val_click_prob, ratio=0.08)),
+          roc_auc_score(y_val_new, managed_change(val_click_prob, ratio=0.10))
+          )
        
     start_t = time.time()
     prediction_click_prob = lgbm.predict_proba(test_X)[:,1]
     outcome_df['predicted_score'] = prediction_click_prob
     
-    lgbm_param['n_estimators'] = int(best_iteration*1.1)
-    print('full fit n_estimators is ', int(best_iteration*1.1))
+    
     param_md5_str = convert_2_md5(lgbm_param)
     store_path = 'C:/D_Disk/data_competition/xunfei_ai_ctr/outcome/'
     partial_file_name = '_'.join(['submission_partial', str(logloss_val), param_md5_str]) + '.csv'
@@ -368,37 +488,105 @@ def test_param(lgbm_param):
     for i in range(5):
         gc.collect()
     
-    start_t = time.time()
-    lgbm = lgb.LGBMClassifier(**lgbm_param)
-    print('starting before fit cost time ', time.time()-start_t)
+#    start_t = time.time()
+#    lgbm_param['n_estimators'] = int(best_iteration*1.0)
+#    print('normal full fit n_estimators is ', int(best_iteration*1.0))
+#    lgbm = lgb.LGBMClassifier(**lgbm_param)
+#    lgbm.fit(train_X, train_y)
+#    print('normal full fit cost time: ', time.time()-start_t)
+#    
+#    start_t = time.time()
+#    prediction_click_prob = lgbm.predict_proba(test_X)[:,1]
+#    outcome_df['predicted_score'] = prediction_click_prob
+#    outcome_df['predicted_score'].to_csv(store_path+full_file_name,
+#           header=['predicted_score'])
+#    print('normal full predict cost time: ', time.time()-start_t)
     
     start_t = time.time()
-    lgbm.fit(train_X, train_y)
-    print('full fit cost time: ', time.time()-start_t)
+    lgbm_param['n_estimators'] = int(best_iteration*1.1)
+    print('extra full fit n_estimators is ', int(best_iteration*1.1))
+    lgbm = lgb.LGBMClassifier(**lgbm_param)
+    
+    learning_rate_func = lgb.reset_parameter(learning_rate = 
+        generate_learning_rate_list()[:lgbm_param['n_estimators']])
+    
+    lgbm.fit(train_X, train_y,
+             callbacks=[learning_rate_func])
+    print('extra full fit cost time: ', time.time()-start_t)
     
     start_t = time.time()
     prediction_click_prob = lgbm.predict_proba(test_X)[:,1]
     outcome_df['predicted_score'] = prediction_click_prob
-    outcome_df['predicted_score'].to_csv(store_path+full_file_name,
+    outcome_df['predicted_score'].to_csv(store_path + full_file_name,
            header=['predicted_score'])
-    
-    print('full predict cost time: ', time.time()-start_t)
+    print('extra full predict cost time: ', time.time()-start_t)
     
     write_to_log('-'*25, ' md5 value: ', param_md5_str, '-'*25)
     write_to_log('param: ', lgbm_param)
-    write_to_log('best_iteration: ', lgbm_param['n_estimators'])
+    write_to_log('best_iteration: ', best_iteration)
     write_to_log('valid rmse: ', logloss_val)
     write_to_log('-'*80+'\n')
+    
+def test_param_xgboost():
+    start_t = time.time()
+    xgbm = xgb.XGBClassifier(max_depth=5, n_estimators=200, n_jobs=3, 
+                             learning_rate=0.08, random_state=42,
+                             silent=False, subsample=0.6, 
+                             colsample_bytree=0.7)
+    print('start partial trainning')
+    xgbm.fit(X_train_new, y_train_new, eval_set=[(X_train_new, y_train_new), 
+            (X_val_new, y_val_new)], eval_metric='logloss',
+            verbose=5, early_stopping_rounds=60)
+    print('partial fit cost time: ', time.time()-start_t)
+    
+    evals_result = xgbm.evals_result()
+    print('xgbm evals_result is ', evals_result)
+    
+    val_click_prob = xgbm.predict_proba(X_val_new)[:,1]
+    print('after managed_change logloss is ',
+          log_loss(y_val_new, val_click_prob),
+          log_loss(y_val_new, managed_change(val_click_prob, ratio=0.01)),
+          log_loss(y_val_new, managed_change(val_click_prob, ratio=0.02)),
+          log_loss(y_val_new, managed_change(val_click_prob, ratio=0.05)),
+          log_loss(y_val_new, managed_change(val_click_prob, ratio=0.08)),
+          log_loss(y_val_new, managed_change(val_click_prob, ratio=0.10))
+          )
+    
+#    best_iteration = xgbm.best_iteration_
+    
+    print('best score value is ', xgbm.best_score_)
+    print('partial fit cost time ', time.time()-start_t)
+#    logloss_val = round(xgbm.best_score_['valid_1']['LOG_LOSS'], 5)
+    
+#    xgbm.fit(train_X, train_y)
+#    y_predprob_xgb = xgbm.predict_proba(test_X)[:,1]
+#    auc_xgboost = roc_auc_score(test_y, y_predprob_xgb)
+#    print('xgboost acc_rate is ', acc_rate_xgboost, auc_xgboost)
+#    end_t_xgb = time.time()
+#    print('xgb total cost time is ', end_t_xgb - start_t_xgb, ' seconds')
+#    feature_matrix = xgbm.feature_importances_
 
 #lgbm_param = {'n_estimators':800, 'n_jobs':-1, 'learning_rate':0.08,
 #              'random_state':SEED, 'max_depth':6, 'min_child_samples':71,
 #              'num_leaves':31, 'subsample':0.75, 'colsample_bytree':0.8,
 #              'subsample_freq':1, 'silent':-1, 'verbose':-1}
 
-lgbm_param = {'n_estimators':1500, 'n_jobs':-1, 'learning_rate':0.09,
+#lgbm_param = {'n_estimators':2000, 'n_jobs':-1, 'learning_rate':0.09,
+#              'random_state':SEED, 'max_depth':6, 'min_child_samples':71,
+#              'num_leaves':31, 'subsample':0.75, 'colsample_bytree':0.2,
+#              'subsample_freq':3, 'silent':-1, 'verbose':-1}
+
+lgbm_param = {'n_estimators':2000, 'n_jobs':-1, 'learning_rate':0.09,
               'random_state':SEED, 'max_depth':6, 'min_child_samples':71,
               'num_leaves':31, 'subsample':0.75, 'colsample_bytree':0.2,
               'subsample_freq':3, 'silent':-1, 'verbose':-1}
 
-test_param(lgbm_param)
+#lgbm_param = {'n_estimators':2000, 'n_jobs':-1, 'learning_rate':0.09,
+#              'random_state':SEED, 'max_depth':5, 'min_child_samples':71,
+#              'num_leaves':31, 'subsample':0.75, 'colsample_bytree':0.1,
+#              'subsample_freq':4, 'silent':-1, 'verbose':-1}
+
+#test_param(lgbm_param)
+
+#test_param_xgboost()
 
