@@ -1,3 +1,7 @@
+# predict-future-sales directory
+predict-future-sales/data/*
+!predict-future-sales/data/README.md
+
 #training or testing data files
 *.csv
 *.json
