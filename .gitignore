@@ -1,3 +1,20 @@
+# predict-future-sales directory
+predict-future-sales/data/*
+predict-future-sales/outcome/*
+predict-future-sales/model_dumps/*
+!predict-future-sales/data/README.md
+!predict-future-sales/model_dumps/README.md
+!predict-future-sales/outcome/README.md
+
+
+# rossmann-store-sales directory
+rossmann-store-sales/data/*
+rossmann-store-sales/outcome/*
+rossmann-store-sales/model_dumps/*
+!rossmann-store-sales/data/README.md
+!rossmann-store-sales/model_dumps/README.md
+!rossmann-store-sales/outcome/README.md
+
 #training or testing data files
 *.csv
 *.json
