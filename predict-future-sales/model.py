@@ -47,6 +47,8 @@ from sklearn.model_selection import train_test_split
 random_seed = 42
 np.random.seed(random_seed)
 
+
+
 # def rmse(y_true, y_predict):
 #     return np.sqrt(np.mean((y_true - y_predict) ** 2))
 
@@ -101,7 +103,19 @@ print('hello world')
 # df_merged = pd.read_csv('./data/hive_sql_merged_instances_comma.csv')
 
 # df_train = pd.read_csv('./data/sales_train_v2.csv', dtype={'item_id': str, 'shop_id': str})
-df_train = pd.read_csv('./data/sales_train_v2.csv')
+
+data_path = 'F:/git_repos/Kaggle_code/predict-future-sales/data/'
+
+start_t = time.time()
+df_train_gz = pd.read_csv(os.path.join(data_path, 'sales_train.csv.gz'))
+print('df_train_gz cost time', time.time()-start_t)
+
+start_t = time.time()
+df_train = pd.read_csv(os.path.join(data_path, 'sales_train_v2.csv'))
+print('df_train cost time', time.time()-start_t)
+
+print('df_train_gz equal df_train', df_train_gz==df_train)
+
 df_train.drop(['date', 'date_block_num'], axis=1, inplace=True)
 
 # df_test = pd.read_csv('./data/test.csv', dtype={'item_id': str, 'shop_id': str}, index_col=0)
