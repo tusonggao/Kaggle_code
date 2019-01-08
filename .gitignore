@@ -3,6 +3,11 @@ predict-future-sales/data/*
 predict-future-sales/outcome/*
 !predict-future-sales/data/README.md
 
+# rossmann-store-sales directory
+rossmann-store-sales/data/*
+rossmann-store-sales/outcome/*
+!rossmann-store-sales/data/README.md
+
 #training or testing data files
 *.csv
 *.json
