@@ -29,6 +29,7 @@ test  = pd.read_csv('data/test.csv.gz').set_index('ID')
 
 print('items.shape is ', items.shape)
 print('cats.shape is ', cats.shape)
+print('test.shape is ', test.shape)
 
 print(len(train))
 train = train[train.item_price<100000]
