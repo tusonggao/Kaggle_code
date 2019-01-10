@@ -27,11 +27,15 @@ train = pd.read_csv('data/sales_train.csv.gz')
 # set index to ID to avoid droping it later
 test  = pd.read_csv('data/test.csv.gz').set_index('ID')
 
+print('items.shape is ', items.shape)
+print('cats.shape is ', cats.shape)
 
 print(len(train))
 train = train[train.item_price<100000]
 train = train[train.item_cnt_day<1001]
 print(len(train))
+
+exit('early exit...')
 
 
 median=train[(train.shop_id==32)&(train.item_id==2973)&(train.date_block_num==4)&(train.item_price>0)].item_price.median()
