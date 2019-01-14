@@ -15,6 +15,13 @@ rossmann-store-sales/model_dumps/*
 !rossmann-store-sales/model_dumps/README.md
 !rossmann-store-sales/outcome/README.md
 
+
+# code_for_kesci directory
+code_for_kesci/data/*
+code_for_kesci/outcome/*
+!code_for_kesci/data/README.md
+!code_for_kesci/outcome/README.md
+
 #training or testing data files
 *.csv
 *.json
