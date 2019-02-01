@@ -47,8 +47,6 @@ from sklearn.model_selection import train_test_split
 random_seed = 42
 np.random.seed(random_seed)
 
-
-
 # def rmse(y_true, y_predict):
 #     return np.sqrt(np.mean((y_true - y_predict) ** 2))
 
@@ -104,7 +102,7 @@ print('hello world')
 
 # df_train = pd.read_csv('./data/sales_train_v2.csv', dtype={'item_id': str, 'shop_id': str})
 
-data_path = 'F:/git_repos/Kaggle_code/predict-future-sales/data/'
+data_path = './data/'
 
 start_t = time.time()
 df_train_gz = pd.read_csv(os.path.join(data_path, 'sales_train.csv.gz'))

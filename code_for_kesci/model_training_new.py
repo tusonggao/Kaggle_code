@@ -394,18 +394,16 @@ print('afte get_dummies, df_merged.shape is ', df_merged.shape)
 df_train = df_merged[df_merged['y'].notnull()]
 df_test = df_merged[df_merged['y'].isnull()]
 
-# df_train = df_train.sample(frac=1)
-# df_train.shuffle(random_state=42)
-# df_val = df_train[:5000]
-# df_train = df_train[5000:]
+df_train = df_train.sample(frac=1)
+df_val = df_train[:20000]
+df_train = df_train[20000:]
 
 df_train_y = df_train['y']
 df_train_X = df_train.drop(['ID', 'y'], axis=1)
 
-# df_val_y = df_val['y']
-# df_val_X = df_val.drop(['ID', 'y'], axis=1)
+df_val_y = df_val['y']
+df_val_X = df_val.drop(['ID', 'y'], axis=1)
 
-# df_test_y = df_test['y']
 test_outcome = pd.DataFrame()
 test_outcome['ID'] = df_test['ID']
 df_test_X = df_test.drop(['ID'], axis=1)
@@ -436,9 +434,7 @@ print('df_train_X.head is ', df_train_X.head(5))
 #                       feature_name = feature_names,
 #                       categorical_feature=cate_cols)
 
-d_train = lgb.Dataset(df_train_X.values,
-                      label=df_train_y.values,
-                      feature_name = feature_names)
+d_train = lgb.Dataset(df_train_X.values, label=df_train_y.values, feature_name = feature_names)
 
 params = {'learning_rate':0.08, 'boosting_type':'gbdt', 'objective':'binary',
           'metric':'binary_logloss', 'sub_feature':0.85, 'sub_sample':0.7,
@@ -449,20 +445,20 @@ params = {'learning_rate':0.08, 'boosting_type':'gbdt', 'objective':'binary',
 #                          num_leaves=100, subsample=0.7, colsample_bytree=0.85,
 #                          silent=-1, verbose=-1, boosting_type='gbdt')
 
+# print('lgb training starts')
+# start_t = time.time()
+# clf = lgb.train(params, d_train, 500)
+# y_pred=clf.predict(df_train_X.values)
+# auc_score = roc_auc_score(df_train_y, y_pred)
+# print('auc_score is ', auc_score, 'predict cost time:', time.time()-start_t)
+
+
 print('lgb training starts')
 start_t = time.time()
 clf = lgb.train(params, d_train, 500)
-y_pred=clf.predict(df_train_X.values)
-auc_score = roc_auc_score(df_train_y, y_pred)
+y_pred=clf.predict(df_val_X.values)
+auc_score = roc_auc_score(df_val_y, y_pred)
 print('auc_score is ', auc_score, 'predict cost time:', time.time()-start_t)
-# print('lgb training ends, cost time', time.time()-start_t)
-
-
-# start_t = time.time()
-# y_pred=clf.predict(df_val_X.values)
-# print('y_pred.shape is ', y_pred.shape)
-# auc_score = roc_auc_score(df_val_y, y_pred)
-# print('auc_score is ', auc_score, 'predict cost time:', time.time()-start_t)
 
 
 start_t = time.time()
@@ -474,72 +470,4 @@ test_outcome['pred'] = y_pred
 test_outcome.to_csv('./outcome/submission.csv', index=False)
 
 
-# start_t = time.time()
-# y_pred=clf.predict(df_test_X.values)
-# print('y_pred.shape is ', y_pred.shape)
-# auc_score = roc_auc_score(df_test_y, y_pred)
-# print('auc_score is ', auc_score, 'predict cost time:', time.time()-start_t)
 
-
-#
-# print('top 200 ratio_multiple is',
-#       compute_density_multiple(df_test_y, y_pred, threshold=200, by_percentage=False),
-#       'top 500 ratio_multiple is',
-#       compute_density_multiple(df_test_y, y_pred, threshold=500, by_percentage=False),
-#       'ratio_multiple top 1 is ',
-#       compute_density_multiple(df_test_y, y_pred, threshold=1),
-#       'ratio_multiple top 5 is ',
-#       compute_density_multiple(df_test_y, y_pred, threshold=5),
-#       'ratio_multiple top 10 is ',
-#       compute_density_multiple(df_test_y, y_pred, threshold=10),
-#       'ratio_multiple top 20 is ',
-#       compute_density_multiple(df_test_y, y_pred, threshold=20),
-#       'ratio_multiple top 30 is',
-#       compute_density_multiple(df_test_y, y_pred, threshold=30)
-# )
-#
-# importance = clf.feature_importance(importance_type='split')
-# feature_name = clf.feature_name()
-# feature_importance = pd.DataFrame({
-#                          'feature_name':feature_name,
-#                          'importance':importance}
-#                      ).sort_values(by='importance', ascending=False)
-# feature_importance.to_csv('./model_output/lgb_feat_importance_split.csv',index=False)
-#
-# importance = clf.feature_importance(importance_type='gain')
-# feature_name = clf.feature_name()
-# feature_importance = pd.DataFrame({
-#                          'feature_name':feature_name,
-#                          'importance':importance}
-#                      ).sort_values(by='importance', ascending=False)
-# feature_importance.to_csv('./model_output/lgb_feat_importance_gain.csv',index=False)
-#
-# # plt.figure(figsize=(12,6))
-# # lgb.plot_importance(clf, max_num_features=30,  importance_type='split')
-# # plt.show()
-# # plt.savefig('lgbm_importances.png')
-#
-# del df_train_y, df_train_X, df_test_y, df_test_X, df_merged_train, df_merged_test
-# gc.collect()
-#
-#
-# ###########################################################################################
-#
-# df_test_real = generate_real_test_df()
-# print('after generate_real_test_df df_test_real shape is ', df_test_real.shape)
-#
-# final_outcome = pd.DataFrame()
-# final_outcome['buy_user_id'] = df_test_real['buy_user_id']
-# df_test_real.drop(['buy_user_id', 'creation_date'], axis=1, inplace=True)
-#
-# print('start real_test!!! ')
-# start_t = time.time()
-# y_pred=clf.predict(df_test_real.values)
-# final_outcome['y'] = y_pred
-# print('y_pred.shape is ', y_pred.shape, 'df_test_real.shape is ', df_test_real.shape)
-# print('final predict cost time:', time.time()-start_t)
-#
-# final_outcome.sort_values(by='y', ascending=False, inplace=True)
-# final_outcome.to_csv('./model_output/final_outcome.csv', index=False, sep='\t')
-#
-# print('program ends')

@@ -5,6 +5,8 @@ import pandas as pd
 # pd.set_option('display.max_rows', 500)
 # pd.set_option('display.max_columns', 100)
 
+import pickle
+
 from itertools import product
 from sklearn.preprocessing import LabelEncoder
 
@@ -112,4 +114,10 @@ model.fit(X_train, Y_train, eval_metric="rmse",
           eval_set=[(X_train, Y_train), (X_valid, Y_valid)],
           verbose=True, early_stopping_rounds = 10)
 
+
+pickle.dumps(model, './model_xgb.bin')
+
+
 print('training cost time', time.time() - start_t)
+
+print('hello world!')
