@@ -6,7 +6,6 @@ predict-future-sales/model_dumps/*
 !predict-future-sales/model_dumps/README.md
 !predict-future-sales/outcome/README.md
 
-
 # rossmann-store-sales directory
 rossmann-store-sales/data/*
 rossmann-store-sales/outcome/*
@@ -28,6 +27,8 @@ code_for_kesci/outcome/*
 *.dat
 *.xlsx
 *.txt
+
+!kaggle_problems_to_explore.xlsx
 
 # zipped files
 *.zip
