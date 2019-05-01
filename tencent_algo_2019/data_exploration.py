@@ -4,8 +4,11 @@ import numpy as np
 import pandas as pd
 
 exposure_file = './data/algo.qq.com_641013010_testa/testA/imps_log/totalExposureLog.out'
-# 10 列 102386695 行  广告请求ID有82085734个不同的  广告位id有329个不同的   曝光广告有 不同的
-# 广告请求ID  广告请求时间  广告位id  曝光广告  曝光广告素材尺寸  曝光广告出价bid  曝光广告pctr  曝光广告quality_ecpm  曝光广告totalEcpm
+# 10 列 102386695 行
+# 广告请求ID有82085734个不同的  广告位id有329个不同的   用户ID有1341958不同的
+# 曝光广告有509280个不同的   曝光广告素材尺寸64个 曝光广告出价bid 19036个不同值
+# 曝光广告pctr 有个不同的值
+# 广告请求ID  广告请求时间  广告位id  用户ID  曝光广告  曝光广告素材尺寸  曝光广告出价bid  曝光广告pctr  曝光广告quality_ecpm  曝光广告totalEcpm
 # line_cnt is  100000 content:  76535481	1550408116	39	926292	118401	36	45	18.812	376.24	1222.24
 # line_cnt is  200000 content:  45340639	1550368494	25	660821	206786	30	11	13.492	269.84	418.252
 # line_cnt is  300000 content:  29906070	1550333927	209	447125	476095	64	27	8.431	168.62	396.257
@@ -30,13 +33,13 @@ with open(exposure_file) as file:
     user_id_set = set()
     for line in file:
         cnt += 1
+        user_id = line.split('\t')[7]
+        user_id_set.add(user_id)
         if cnt%100000==0:
             print('line_cnt is ', cnt, 'content: ', line)
             line_len = len(line.split('\t'))
             # if line_len!=11:
-            print('len of line is ', line_len, 'len of user_id_set: ', len(user_id_set))
-        user_id = line.split('\t')[3]
-        user_id_set.add(user_id)
+            print('len of line is ', line_len, 'len of user_id_set: ', len(user_id_set), 'current user_id ', user_id)
         # if cnt>=30:
         #     break
 print('len of user_id_set is,', len(user_id_set))
