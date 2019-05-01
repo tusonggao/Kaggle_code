@@ -1,1 +1,1 @@
-this folder for training and test files/////////////////////////////////////
+this folder for training and test files
