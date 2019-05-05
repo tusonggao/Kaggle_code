@@ -33,16 +33,19 @@ ad_static_feature_file = './data/algo.qq.com_641013010_testa/testA/ad_static_fea
 
 
 ad_operation_file = './data/algo.qq.com_641013010_testa/testA/ad_operation.dat'
+# 7 列 760866 行
+# 第一列 38843个不同值
+
 
 
 start_t = time.time()
 print('start prog')
-with open(ad_static_feature_file) as file:
+with open(ad_operation_file) as file:
     cnt = 0
     user_id_set = set()
     for line in file:
         cnt += 1
-        user_id = line.split('\t')[6]
+        user_id = line.split('\t')[0]
         place_ids = set(user_id.split(','))
         # if len(place_ids)>=2:
         #     print('find a comma in this field， user_id is ', user_id)
