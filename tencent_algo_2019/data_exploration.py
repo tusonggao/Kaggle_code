@@ -34,7 +34,9 @@ ad_static_feature_file = './data/algo.qq.com_641013010_testa/testA/ad_static_fea
 
 ad_operation_file = './data/algo.qq.com_641013010_testa/testA/ad_operation.dat'
 # 7 列 760866 行
-# 第一列 38843个不同值
+# 广告ID有38843个不同值  操作类型有2个不同值：1修改 2新建
+# 修改字段有4个不同值
+# 广告ID   创建时间    操作类型    修改字段    操作后字段值    人群定向
 
 
 
@@ -45,11 +47,11 @@ with open(ad_operation_file) as file:
     user_id_set = set()
     for line in file:
         cnt += 1
-        user_id = line.split('\t')[0]
+        user_id = line.split('\t')[3]
         place_ids = set(user_id.split(','))
-        # if len(place_ids)>=2:
-        #     print('find a comma in this field， user_id is ', user_id)
-        #     break
+        if len(place_ids)>=2:
+            print('find a comma in this field， user_id is ', user_id)
+            break
         # user_id_set.add(user_id)
         user_id_set |= place_ids
         if cnt%100000==0:
