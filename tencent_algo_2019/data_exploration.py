@@ -13,6 +13,15 @@ exposure_file = './data/algo.qq.com_641013010_testa/testA/imps_log/totalExposure
 # line_cnt is  200000 content:  45340639	1550368494	25	660821	206786	30	11	13.492	269.84	418.252
 # line_cnt is  300000 content:  29906070	1550333927	209	447125	476095	64	27	8.431	168.62	396.257
 
+# final date_count is  {'2019-02-16': 9178, '2019-02-17': 3641843, '2019-02-18': 3662297, '2019-02-19': 3614462,
+# '2019-02-20': 3375771, '2019-02-21': 3180386, '2019-02-22': 3200624, '2019-02-23': 3535602, '2019-02-24': 3403865,
+# '2019-02-25': 2875131, '2019-02-26': 2909223, '2019-02-27': 2962564, '2019-02-28': 2963833, '2019-03-01': 3180607,
+# '2019-03-02': 3687014, '2019-03-03': 3531212, '2019-03-04': 2969010, '2019-03-05': 3003831, '2019-03-06': 2999041,
+# '2019-03-07': 3019025,
+# '2019-03-08': 3191187, '2019-03-09': 3809474, '2019-03-10': 3680312, '2019-03-11': 3046077, '2019-03-12': 3128640,
+# '2019-03-13': 3110763, '2019-03-14': 3188419, '2019-03-15': 3346954, '2019-03-16': 3949803, '2019-03-17': 3849068,
+# '2019-03-18': 3221264, '2019-03-19': 3140215}
+
 
 user_file = './data/algo.qq.com_641013010_testa/testA/user/user_data'
 # 11 列 1396718 行  每一行的user_id都是不同的
@@ -39,32 +48,56 @@ ad_operation_file = './data/algo.qq.com_641013010_testa/testA/ad_operation.dat'
 # 广告ID   创建时间    操作类型    修改字段    操作后字段值    人群定向
 
 
-
 start_t = time.time()
 print('start prog')
-with open(ad_operation_file) as file:
+date_count = {}
+with open(exposure_file) as file:
     cnt = 0
     user_id_set = set()
     for line in file:
         cnt += 1
-        user_id = line.split('\t')[3]
-        place_ids = set(user_id.split(','))
-        if len(place_ids)>=2:
-            print('find a comma in this field， user_id is ', user_id)
-            break
-        # user_id_set.add(user_id)
-        user_id_set |= place_ids
-        if cnt%100000==0:
-            print('line_cnt is ', cnt, 'line is', line)
-            # print('user id is ', user_id, 'len of place_ids is ', len(place_ids))
-            line_len = len(line.split('\t'))
-            # if line_len!=11:
-            print('len of line is ', line_len, 'len of user_id_set: ', len(user_id_set), 'current user_id ', user_id,
-                  'line_cnt is', cnt)
-            # print('user id is ', user_id, 'len of place_ids is ', len(place_ids),
-            #       'len of user_id_set ', len(user_id_set), 'line num:', cnt)
-        # if cnt>=30:
+        # if cnt >= 500:
         #     break
-print('len of user_id_set is,', len(user_id_set))
-# print('content of user_id_set is ', sorted(list(user_id_set)))
-print('end prog, cnt is ', cnt, 'time cost ', time.time()-start_t)
+        time_str = line.split('\t')[1]
+        real_time_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(int(time_str)))
+        day_str = real_time_str[:10]
+        date_count[day_str] = date_count.get(day_str, 0) + 1
+        if cnt%5000==0:
+            print('cnt is', cnt)
+            print('real_time_str is', real_time_str, 'real_time_str[:10] is', day_str)
+            print('current date_count is ', date_count)
+
+print('final date_count is ', date_count)
+
+######################################################################################
+
+# start_t = time.time()
+# print('start prog')
+# with open(exposure_file) as file:
+#     cnt = 0
+#     user_id_set = set()
+#     for line in file:
+#         cnt += 1
+#         if cnt >= 5:
+#             break
+#         user_id = line.split('\t')[1]
+#         place_ids = set(user_id.split(','))
+#         if len(place_ids)>=2:
+#             print('find a comma in this field， user_id is ', user_id)
+#             break
+#         # user_id_set.add(user_id)
+#         user_id_set |= place_ids
+#         if cnt%100000==0:
+#             print('line_cnt is ', cnt, 'line is', line)
+#             # print('user id is ', user_id, 'len of place_ids is ', len(place_ids))
+#             line_len = len(line.split('\t'))
+#             # if line_len!=11:
+#             print('len of line is ', line_len, 'len of user_id_set: ', len(user_id_set), 'current user_id ', user_id,
+#                   'line_cnt is', cnt)
+#             # print('user id is ', user_id, 'len of place_ids is ', len(place_ids),
+#             #       'len of user_id_set ', len(user_id_set), 'line num:', cnt)
+#         # if cnt>=30:
+#         #     break
+# print('len of user_id_set is,', len(user_id_set))
+# # print('content of user_id_set is ', sorted(list(user_id_set)))
+# print('end prog, cnt is ', cnt, 'time cost ', time.time()-start_t)
