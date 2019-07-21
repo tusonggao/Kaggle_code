@@ -1,0 +1,66 @@
+# notepad++备份文件夹
+nppBackup/
+
+# 数据文件夹
+data/
+
+# rossmann-store-sales directory
+rossmann-store-sales/data/*
+rossmann-store-sales/outcome/*
+rossmann-store-sales/model_dumps/*
+!rossmann-store-sales/data/README.md
+!rossmann-store-sales/model_dumps/README.md
+!rossmann-store-sales/outcome/README.md
+
+
+# code_for_kesci directory
+code_for_kesci/data/*
+code_for_kesci/outcome/*
+!code_for_kesci/data/README.md
+!code_for_kesci/outcome/README.md
+
+#training or testing data files
+*.csv
+*.json
+*.dat
+*.xlsx
+*.txt
+
+!kaggle_problems_to_explore.xlsx
+
+# zipped files
+*.zip
+*.rar
+*.gz
+*.7z
+
+#dump model
+*.pkl
+*.exe
+
+#ploting graph
+*.png
+*.jpg
+*.gif
+
+#ipython notebook checkpoint files
+*-checkpoint.ipynb
+
+#the-nature-conservancy-fisheries-monitoring
+the-nature-conservancy-fisheries-monitoring/input
+the-nature-conservancy-fisheries-monitoring/train
+the-nature-conservancy-fisheries-monitoring/test_stg1
+
+
+#test directory
+house_price_predict/history
+house_price_predict/dumps
+house_price_predict/cache
+
+
+#
+digit_recognizer/history
+
+#jd_contest
+jd_contest/data
+jd_contest/.ipynb_checkpoints
